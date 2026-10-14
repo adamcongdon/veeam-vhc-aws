@@ -7,6 +7,7 @@ using Xunit;
 
 namespace VeeamVhcAws.Tests.Commands;
 
+[Collection("console")]
 public class ServeBindTests
 {
     [Fact]

@@ -12,6 +12,7 @@ using VeeamVhcAws.Outputs;
 
 namespace VeeamVhcAws.Tests.Outputs;
 
+[Collection("console")]
 public class DeliveryFailureTests
 {
     [Fact]
