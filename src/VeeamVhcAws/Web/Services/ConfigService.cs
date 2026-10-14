@@ -57,8 +57,9 @@ public class ConfigService
             .Select(o =>
             {
                 var fields = new Dictionary<string, object?>();
+                var outputType = o.Get("type", "unknown");
                 foreach (var (k, v) in o)
-                    if (k != "type") fields[k] = MaskSecret(k, v);
+                    if (k != "type") fields[k] = MaskSecret(outputType, k, v);
                 return new OutputView(o.Get("type", "unknown"), fields);
             })
             .ToList();
@@ -75,10 +76,6 @@ public class ConfigService
             DailySummary: cfg.GetSection("daily_summary"));
     }
 
-    /// <summary>
-    /// Replace the servers section with the provided list. Preserves password obfuscation:
-    /// if <c>PasswordChanged</c> is false, the existing on-disk password is kept verbatim.
-    /// </summary>
     public void SaveServers(IReadOnlyList<ServerEdit> servers)
     {
         lock (_saveLock)
@@ -152,7 +149,16 @@ public class ConfigService
                 {
                     if (v is null) continue;
 
-                    if (IsSecretKey(k))
+                    if (o.Type.Equals("webhook", StringComparison.OrdinalIgnoreCase) &&
+                        k.Equals("url", StringComparison.OrdinalIgnoreCase) &&
+                        v is string submittedUrl && submittedUrl == "********")
+                    {
+                        entry[k] = i < existingList.Count &&
+                            existingList[i].Get("type", "").Equals("webhook", StringComparison.OrdinalIgnoreCase)
+                            ? existingList[i].Get("url", "")
+                            : "";
+                    }
+                    else if (IsSecretKey(k))
                     {
                         if (o.ChangedSecretKeys.Contains(k))
                         {
@@ -235,10 +241,13 @@ public class ConfigService
         File.Move(tmp, _configPath, overwrite: true);
     }
 
-    private static object? MaskSecret(string key, object? value)
+    private static object? MaskSecret(string outputType, string key, object? value)
     {
         if (value is null) return null;
-        if (key.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+        var maskWebhook = outputType.Equals("webhook", StringComparison.OrdinalIgnoreCase) &&
+            key.Equals("url", StringComparison.OrdinalIgnoreCase);
+        if (maskWebhook ||
+            key.Contains("password", StringComparison.OrdinalIgnoreCase) ||
             key.Contains("token", StringComparison.OrdinalIgnoreCase) ||
             key.Contains("secret", StringComparison.OrdinalIgnoreCase))
             return string.IsNullOrEmpty(value as string) ? "" : "********";
