@@ -7,10 +7,62 @@ public static class ConfigPathJail
     public static string Resolve(string configFilePath, string candidate)
     {
         var full = Lexical(configFilePath, candidate);
-        var root = Path.GetDirectoryName(Path.GetFullPath(configFilePath));
-        if (string.IsNullOrEmpty(root) || !IsInside(RealPath(root), RealPath(full)))
+        var realCandidate = RealPath(full);
+        var roots = AllowedRoots(configFilePath);
+        if (roots.Count == 0)
             throw new InvalidOperationException(OutsideMessage);
-        return full;
+
+        var configRoot = RealPath(roots[0]);
+        if (!Path.IsPathRooted(candidate))
+        {
+            if (!IsInside(configRoot, realCandidate))
+                throw new InvalidOperationException(OutsideMessage);
+            return full;
+        }
+
+        foreach (var root in roots)
+        {
+            if (IsInside(RealPath(root), realCandidate))
+                return full;
+        }
+
+        throw new InvalidOperationException(OutsideMessage);
+    }
+
+    internal static IReadOnlyList<string> AllowedRoots(string configFilePath)
+    {
+        var configDir = Path.GetDirectoryName(Path.GetFullPath(configFilePath));
+        if (string.IsNullOrEmpty(configDir))
+            return Array.Empty<string>();
+
+        var roots = new List<string> { configDir };
+        var data = DataDirectory(configFilePath, configDir);
+        if (data is not null && !PathsEqual(RealPath(configDir), RealPath(data)))
+            roots.Add(data);
+        return roots;
+    }
+
+    private static string? DataDirectory(string configFilePath, string configDir)
+    {
+        if (!File.Exists(configFilePath))
+            return null;
+        var raw = ConfigLoader.LoadConfig(configFilePath).GetSection("global").Get("data_directory", "");
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+        return Path.IsPathRooted(raw)
+            ? Path.GetFullPath(raw)
+            : Path.GetFullPath(Path.Combine(configDir, raw));
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+            comparison);
     }
 
     private static string Lexical(string configPath, string path)

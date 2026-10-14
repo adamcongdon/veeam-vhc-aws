@@ -407,7 +407,7 @@ output:
 
 ### Logging
 
-Log files rotate daily. The log path must stay inside the directory that contains the config file. Key options:
+Log files rotate daily. A relative path stays in the directory that contains the config file. An absolute path is allowed in that directory, and also under `global.data_directory` when that key is set. `setup.ps1` sets `data_directory` to `C:\ProgramData\VHC` and puts the state file and logs under that directory. Key options:
 
 ```yaml
 global:
