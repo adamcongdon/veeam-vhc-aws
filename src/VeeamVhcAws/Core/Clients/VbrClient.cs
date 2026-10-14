@@ -37,6 +37,7 @@ public class VbrClient : IVbrClient
         _pageSize = pageSize;
         _maxPages = maxPages;
         _http = new HttpClient(handler ?? CreateHandler()) { Timeout = Timeout.InfiniteTimeSpan };
+        _auth.BindClient(_http);
     }
 
     private HttpMessageHandler CreateHandler()
@@ -61,6 +62,7 @@ public class VbrClient : IVbrClient
         }
 
         Exception? lastError = null;
+        var refreshed = false;
         for (int attempt = 0; attempt <= _retryCount; attempt++)
         {
             var sw = Stopwatch.StartNew();
@@ -79,10 +81,27 @@ public class VbrClient : IVbrClient
                 }
 
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds ?? _timeout));
-                var response = _http.SendAsync(request, timeout.Token).GetAwaiter().GetResult();
+                using var response = _http.SendAsync(request, timeout.Token).GetAwaiter().GetResult();
                 var durationMs = sw.ElapsedMilliseconds;
                 Logger.Debug("VBR {Method} {Path} -> {StatusCode} ({Duration}ms)",
                     method, path, (int)response.StatusCode, durationMs);
+
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    if (!refreshed)
+                    {
+                        refreshed = true;
+                        _auth.Invalidate();
+                        attempt--;
+                        continue;
+                    }
+
+                    lastError = new HttpRequestException(
+                        "VBR request unauthorized after token refresh.",
+                        null,
+                        HttpStatusCode.Unauthorized);
+                    break;
+                }
 
                 response.EnsureSuccessStatusCode();
 
