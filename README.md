@@ -188,7 +188,7 @@ veeam-vhc-aws ui -c config.yaml --no-browser
 |---|---|
 | **Dashboard** | At-a-glance status banner, per-server health cards, last-run time, finding counts |
 | **Alerts** | Live table of active findings with severity badges. **Click [Suppress] to silence an alert.** Filter by severity/server, search by resource. Auto-refreshes every 5s. |
-| **Servers** | Add/edit/delete VBR and VBAWS servers via forms. Passwords are encrypted on save with a machine-local key and stored with an `ENC:` prefix. Existing values written by the old shared passphrase still decrypt. `encrypt-config` rewrites those legacy values. |
+| **Servers** | Add/edit/delete VBR and VBAWS servers via forms. Passwords are encrypted on save with a machine-local key and stored with an `ENC:` prefix. Existing values written by the old shared passphrase still decrypt. `encrypt-config` rewrites those legacy values. A server URL change requires the password again. |
 | **Outputs** | Add/edit/delete notification channels — webhook (Slack/Teams/ntfy/PagerDuty), email (SMTP), Prometheus, JSON file. Per-type form fields. |
 | **Thresholds** | Tabbed editor for per-monitor thresholds (Repo Health / Retention / Worker Health). |
 | **Captures** | Historical error log with filter (suppressed/unsuppressed). Same suppress/unsuppress controls as Alerts. |

@@ -24,6 +24,8 @@ public record OutputEdit(string Type, Dictionary<string, object?> Fields, IReadO
 
 public class ConfigService
 {
+    public const string UrlChangeRequiresPassword = "A server URL change requires a new password.";
+
     private readonly string _configPath;
     private readonly object _saveLock = new();
 
@@ -91,6 +93,13 @@ public class ConfigService
             var newList = new List<object>();
             foreach (var s in servers)
             {
+                if (!s.PasswordChanged &&
+                    existingByName.TryGetValue(s.Name, out var priorForUrl) &&
+                    !string.Equals(priorForUrl.Get("url", ""), s.Url, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(UrlChangeRequiresPassword);
+                }
+
                 string passwordOnDisk;
                 if (s.PasswordChanged)
                 {
