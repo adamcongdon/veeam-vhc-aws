@@ -29,6 +29,20 @@ public class VbrAuth : ITokenProvider
     private bool IsTokenExpired() =>
         _token == null || DateTimeOffset.UtcNow >= _tokenExpiry.AddSeconds(-60);
 
+    internal void SeedToken(string token)
+    {
+        _semaphore.Wait();
+        try
+        {
+            _token = token;
+            _tokenExpiry = DateTimeOffset.UtcNow.AddHours(1);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
     public string GetToken()
     {
         _semaphore.Wait();

@@ -19,11 +19,12 @@ public class VbrClient : IVbrClient
     private readonly string _apiVersion;
     private readonly int _pageSize;
     private readonly int _maxPages;
+    private readonly HttpClient _http;
 
     public VbrClient(string baseUrl, VbrAuth auth, bool verifySsl = true,
         int timeout = 30, int retryCount = 2, int retryDelay = 5,
         string apiVersion = "1.3-rev1", int pageSize = 500, int maxPages = 100,
-        int sessionTimeout = 600)
+        int sessionTimeout = 600, HttpMessageHandler? handler = null)
     {
         _baseUrl = baseUrl.TrimEnd('/');
         _auth = auth;
@@ -35,18 +36,16 @@ public class VbrClient : IVbrClient
         _apiVersion = apiVersion;
         _pageSize = pageSize;
         _maxPages = maxPages;
+        _http = new HttpClient(handler ?? CreateHandler()) { Timeout = Timeout.InfiniteTimeSpan };
     }
 
-    private HttpClient CreateClient() => CreateClientWithTimeout(_timeout);
-
-    private HttpClient CreateClientWithTimeout(int timeoutSeconds)
+    private HttpMessageHandler CreateHandler()
     {
         var handler = new HttpClientHandler();
         if (!_verifySsl)
             handler.ServerCertificateCustomValidationCallback =
                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-
-        return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(timeoutSeconds) };
+        return handler;
     }
 
     private Dictionary<string, object> Request(string method, string path,
@@ -68,9 +67,6 @@ public class VbrClient : IVbrClient
             try
             {
                 var headers = _auth.GetHeaders();
-                using var client = timeoutSeconds.HasValue
-                    ? CreateClientWithTimeout(timeoutSeconds.Value)
-                    : CreateClient();
                 var request = new HttpRequestMessage(new HttpMethod(method), url);
                 foreach (var (key, value) in headers)
                     request.Headers.TryAddWithoutValidation(key, value);
@@ -82,7 +78,8 @@ public class VbrClient : IVbrClient
                     request.Content = new StringContent(bodyJson, System.Text.Encoding.UTF8, "application/json");
                 }
 
-                var response = client.SendAsync(request).GetAwaiter().GetResult();
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds ?? _timeout));
+                var response = _http.SendAsync(request, timeout.Token).GetAwaiter().GetResult();
                 var durationMs = sw.ElapsedMilliseconds;
                 Logger.Debug("VBR {Method} {Path} -> {StatusCode} ({Duration}ms)",
                     method, path, (int)response.StatusCode, durationMs);
