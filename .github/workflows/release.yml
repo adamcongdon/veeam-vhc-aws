@@ -27,6 +27,9 @@ jobs:
           dotnet restore src/VeeamVhcAws/VeeamVhcAws.csproj
           dotnet test tests/VeeamVhcAws.Tests/VeeamVhcAws.Tests.csproj -c Release -v normal
 
+      - name: Test admin UI
+        run: dotnet test tests/VeeamVhcAws.UiTests/VeeamVhcAws.UiTests.csproj -c Release -v normal
+
   security:
     name: Security Gate
     runs-on: ubuntu-latest
