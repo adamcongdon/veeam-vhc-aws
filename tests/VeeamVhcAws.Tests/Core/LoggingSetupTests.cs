@@ -132,9 +132,7 @@ public class LoggingSetupTests
         var blocker = Path.Combine(root, "not-a-directory");
         File.WriteAllText(blocker, "x");
         var configured = Path.Combine(blocker, "veeam-vhc-aws.log");
-        var fallbackRoot = Path.Combine(root, "fallback");
         var previous = Log.Logger;
-        LoggingSetup.FallbackDirectoryOverride = fallbackRoot;
         try
         {
             LoggingSetup.Setup(new Dictionary<string, object>
@@ -152,16 +150,14 @@ public class LoggingSetupTests
             Log.Information("fallback-proof");
             Log.CloseAndFlush();
 
-            var dir = Path.Combine(fallbackRoot, "VHC", "logs");
+            var dir = Path.Combine(root, "logs");
             var files = Directory.Exists(dir) ? Directory.GetFiles(dir) : Array.Empty<string>();
-            Assert.NotEmpty(files);
             var text = string.Join("\n", files.Select(File.ReadAllText));
             Assert.Contains("fallback-proof", text);
             Assert.Contains(configured, text);
         }
         finally
         {
-            LoggingSetup.FallbackDirectoryOverride = null;
             Log.Logger = previous;
             Log.CloseAndFlush();
             Directory.Delete(root, recursive: true);

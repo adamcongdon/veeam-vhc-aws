@@ -33,7 +33,7 @@ public static class LoggingSetup
             .MinimumLevel.Is(level)
             .Enrich.WithProperty("Application", "veeam-vhc-aws");
 
-        var chosen = ChooseWritableLogFile(logFile, out var primaryError);
+        var chosen = ChooseWritableLogFile(logFile, configPath, out var primaryError);
         if (chosen is not null)
             logConfig = AttachFileSink(logConfig, chosen, rotationKeep);
         else
@@ -58,21 +58,7 @@ public static class LoggingSetup
             CheckLogDiskSpace(chosen, diskWarningPct);
     }
 
-    internal static string? FallbackDirectoryOverride { get; set; }
-
-    internal static string FallbackLogFile()
-    {
-        var root = FallbackDirectoryOverride;
-        if (string.IsNullOrEmpty(root))
-        {
-            root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrEmpty(root))
-                root = Path.GetTempPath();
-        }
-        return Path.Combine(root, "VHC", "logs", "veeam-vhc-aws.log");
-    }
-
-    private static string? ChooseWritableLogFile(string configured, out string? primaryError)
+    private static string? ChooseWritableLogFile(string configured, string configPath, out string? primaryError)
     {
         if (TryPrepareFile(configured, out primaryError))
         {
@@ -80,10 +66,32 @@ public static class LoggingSetup
             return configured;
         }
 
-        var fallback = FallbackLogFile();
-        if (!PathsEqual(fallback, configured) && TryPrepareFile(fallback, out _))
-            return fallback;
+        foreach (var candidate in FallbackCandidates(configPath, configured))
+        {
+            if (TryPrepareFile(candidate, out _))
+                return candidate;
+        }
+
         return null;
+    }
+
+    private static IEnumerable<string> FallbackCandidates(string configPath, string configured)
+    {
+        foreach (var root in ConfigPathJail.AllowedRoots(configPath))
+        {
+            string resolved;
+            try
+            {
+                resolved = ConfigPathJail.Resolve(configPath, Path.Combine(root, "logs", "veeam-vhc-aws.log"));
+            }
+            catch (InvalidOperationException)
+            {
+                continue;
+            }
+
+            if (!PathsEqual(resolved, configured))
+                yield return resolved;
+        }
     }
 
     private static bool PathsEqual(string left, string right)
@@ -158,10 +166,8 @@ public static class LoggingSetup
             {
                 EventLog.WriteEntry("Application", message, type);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                var spare = Path.Combine(Path.GetTempPath(), "veeam-vhc-aws-eventlog.log");
-                File.AppendAllText(spare, message + Environment.NewLine + ex + Environment.NewLine);
             }
         }
     }
