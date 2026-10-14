@@ -38,7 +38,7 @@ public class WebhookLogTests
         handler.Emit(Sample(Severity.Warning));
 
         var text = string.Join("\n", handler.Logs);
-        Assert.Contains("Webhook failed for 127.0.0.1:", text);
+        Assert.Equal("Webhook rejected for 127.0.0.1: loopback", text);
         Assert.DoesNotContain("SECRET", text);
         Assert.DoesNotContain("T123", text);
     }
@@ -60,7 +60,7 @@ public class WebhookLogTests
         try
         {
             var handler = new WebhookHandler(
-                $"http://127.0.0.1:{port}/services/T123/SECRET", "generic", "ok");
+                $"http://127.0.0.1:{port}/services/T123/SECRET", "generic", "ok", allowLoopback: true);
             handler.Emit(Sample(Severity.Warning));
             var finished = await Task.WhenAny(serve, Task.Delay(TimeSpan.FromSeconds(5)));
             Assert.Same(serve, finished);

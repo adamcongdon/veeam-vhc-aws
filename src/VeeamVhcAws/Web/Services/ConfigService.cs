@@ -160,6 +160,15 @@ public class ConfigService
                         entry[k] = v;
                     }
                 }
+                if (i < existingList.Count &&
+                    string.Equals(existingList[i].Get("type", ""), o.Type, StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var (k, v) in existingList[i])
+                    {
+                        if (!entry.ContainsKey(k))
+                            entry[k] = v;
+                    }
+                }
                 newList.Add(entry);
             }
 

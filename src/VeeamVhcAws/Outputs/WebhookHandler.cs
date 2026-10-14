@@ -22,17 +22,19 @@ public class WebhookHandler : IOutputHandler
     private readonly string _template;
     private readonly Severity _minSeverity;
     private readonly bool _deduplicate;
+    private readonly bool _allowLoopback;
     private readonly List<string> _logs = new();
 
     internal IReadOnlyList<string> Logs => _logs;
 
     public WebhookHandler(string url, string template = "generic",
-        string minSeverity = "ok", bool deduplicate = true)
+        string minSeverity = "ok", bool deduplicate = true, bool allowLoopback = false)
     {
         _url = url;
         _template = template.ToLowerInvariant();
         _minSeverity = SeverityExtensions.ParseSeverity(minSeverity);
         _deduplicate = deduplicate;
+        _allowLoopback = allowLoopback;
     }
 
     private bool ShouldSend(IReadOnlyList<MonitorResult> results)
@@ -552,9 +554,16 @@ public class WebhookHandler : IOutputHandler
             }
         }
 
+        var decision = OutboundUrlDecision.Decide(_url, _allowLoopback);
+        if (!decision.Allowed)
+        {
+            Record($"Webhook rejected for {decision.Host}: {decision.Reason}");
+            return;
+        }
+
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            using var client = OutboundUrlDecision.CreateClient();
             HttpResponseMessage response;
 
             if (_template == "ntfy")

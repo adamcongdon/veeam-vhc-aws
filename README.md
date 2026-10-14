@@ -386,6 +386,8 @@ The setup wizard configures notifications for you, but you can also edit the con
 
 Each handler supports `min_severity` to control when it fires (`ok`, `warning`, `critical`).
 
+Webhook and Pushgateway URLs cannot target link-local addresses, `169.254.169.254`, or a loopback host. Set `allow_loopback: true` on that output to allow loopback. Private RFC 1918 addresses stay allowed. Sends do not follow redirects.
+
 Example stacking multiple outputs:
 
 ```yaml

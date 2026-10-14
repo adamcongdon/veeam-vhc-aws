@@ -19,13 +19,13 @@ public class OutboundUrlDecisionTests
     [InlineData("ftp://10.1.2.3/hook", false, false, "10.1.2.3", "scheme")]
     [InlineData("http://169.254.169.254/latest/meta-data", false, false, "169.254.169.254", "metadata")]
     [InlineData("http://169.254.1.1/", false, false, "169.254.1.1", "link-local")]
-    [InlineData("http://[fe80::1]/", false, false, "fe80::1", "link-local")]
+    [InlineData("http://[fe80::1]/", false, false, "[fe80::1]", "link-local")]
     [InlineData("http://0.0.0.0/", false, false, "0.0.0.0", "unspecified")]
-    [InlineData("http://[::]/", false, false, "::", "unspecified")]
+    [InlineData("http://[::]/", false, false, "[::]", "unspecified")]
     [InlineData("http://127.0.0.1/secret", false, false, "127.0.0.1", "loopback")]
     [InlineData("http://127.0.0.1/secret", true, true, "127.0.0.1", "")]
-    [InlineData("http://[::1]/secret", false, false, "::1", "loopback")]
-    [InlineData("http://[::ffff:169.254.169.254]/", false, false, "::ffff:169.254.169.254", "metadata")]
+    [InlineData("http://[::1]/secret", false, false, "[::1]", "loopback")]
+    [InlineData("http://[::ffff:169.254.169.254]/", false, false, "[::ffff:169.254.169.254]", "metadata")]
     public void Decide_ReturnsTheLiteralResult(string url, bool allowLoopback, bool allowed, string host, string reason)
     {
         var decision = OutboundUrlDecision.Decide(url, allowLoopback);

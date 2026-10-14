@@ -15,12 +15,14 @@ public static class OutputHandlerFactory
             cfg.Get<string>("url", ""),
             cfg.Get("template", "generic"),
             cfg.Get("min_severity", "ok"),
-            cfg.Get("deduplicate", true)),
+            cfg.Get("deduplicate", true),
+            cfg.Get("allow_loopback", false)),
         ["prometheus"] = cfg => new PrometheusHandler(
             cfg.Get("mode", "pushgateway"),
             cfg.Get<string?>("url", null),
             cfg.Get("job", "veeam_vhc_aws"),
-            cfg.Get("port", 9100)),
+            cfg.Get("port", 9100),
+            cfg.Get("allow_loopback", false)),
         ["email"] = cfg => new EmailHandler(
             cfg.Get("smtp_host", ""),
             cfg.Get("smtp_port", 587),

@@ -135,6 +135,27 @@ public class ConfigServiceTests : IDisposable
     }
 
     [Fact]
+    public void SaveOutputs_KeepsAllowLoopbackWhenTheFormOmitsIt()
+    {
+        var initial = "output:\n  - type: webhook\n    url: https://hooks.example/secret\n    template: generic\n    allow_loopback: true\n";
+        var svc = BuildService(initial);
+
+        svc.SaveOutputs(new[]
+        {
+            new OutputEdit("webhook", new Dictionary<string, object?>
+            {
+                ["url"] = "https://hooks.example/secret",
+                ["template"] = "ntfy",
+            }, new HashSet<string>()),
+        });
+
+        var output = ConfigLoader.LoadConfig(_configPath).GetListOfSections("output")[0];
+        Assert.Equal("https://hooks.example/secret", output.Get("url", ""));
+        Assert.Equal("ntfy", output.Get("template", ""));
+        Assert.True(output.Get("allow_loopback", false));
+    }
+
+    [Fact]
     public void SaveOutputs_EmailWithUnchangedPassword_PreservesObfuscation()
     {
         var initial = "output:\n  - type: email\n    smtp_host: mail.example.com\n    smtp_port: 587\n    from_addr: a@b\n    to_addrs: c@d\n    smtp_username: user\n    smtp_password: \"ENC:originalcipher\"\n    use_tls: true\n";
