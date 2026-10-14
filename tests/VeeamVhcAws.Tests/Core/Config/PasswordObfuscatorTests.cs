@@ -75,6 +75,39 @@ public class PasswordObfuscatorTests
     }
 
     [Fact]
+    public void Obfuscate_WritesAnOwnerOnlyKeyFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "vhc-key-" + Guid.NewGuid().ToString("n"));
+        try
+        {
+            string stored;
+            using (SecretKeyStore.UseKeyFile(path))
+            {
+                stored = PasswordObfuscator.Obfuscate("verify-secret");
+                Assert.Equal("verify-secret", PasswordObfuscator.Deobfuscate(stored));
+            }
+
+            var header = File.ReadAllBytes(path);
+            Assert.Equal(new byte[] { (byte)'V', (byte)'H', (byte)'C', (byte)'K' }, header[..4]);
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Equal((byte)2, header[4]);
+                return;
+            }
+
+            Assert.Equal((byte)1, header[4]);
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(path));
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.OtherRead);
+            using (SecretKeyStore.UseKeyFile(path))
+                Assert.Throws<InvalidOperationException>(() => PasswordObfuscator.Obfuscate("again"));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Obfuscate_DoesNotUseThePublishedPassphrase()
     {
         var stored = PasswordObfuscator.Obfuscate("verify-secret");
@@ -98,6 +131,7 @@ public class PasswordObfuscatorTests
             var updated = await File.ReadAllTextAsync(path);
             Assert.DoesNotContain(legacy, updated);
             var stored = updated.Split('"').First(part => part.StartsWith("ENC:", StringComparison.Ordinal));
+            SecretKeyStore.BindThreadDirectory(path);
             Assert.Equal("verify-secret", PasswordObfuscator.Deobfuscate(stored));
         }
         finally
