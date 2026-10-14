@@ -8,13 +8,13 @@ namespace VeeamVhcAws.Core.Logging;
 
 public static class LoggingSetup
 {
-    public static void Setup(Dictionary<string, object> config)
+    public static void Setup(Dictionary<string, object> config, string configPath)
     {
         var globalCfg = config.GetSection("global");
         var logCfg = globalCfg.GetSection("logging");
 
         var levelName = logCfg.Get("level", "DEBUG").ToUpperInvariant();
-        var logFile = logCfg.Get("file", "./veeam-vhc-aws.log");
+        var logFile = ConfigPathJail.Resolve(configPath, logCfg.Get("file", "./veeam-vhc-aws.log"));
         var rotationKeep = logCfg.Get("rotation_keep", 30);
         var consoleEnabled = logCfg.Get("console", true);
         var diskWarningPct = logCfg.Get("disk_warning_pct", 20);

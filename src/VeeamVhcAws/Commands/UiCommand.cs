@@ -32,7 +32,7 @@ public static class UiCommand
             if (File.Exists(configPath))
             {
                 var cfg = ConfigLoader.LoadConfig(configPath);
-                LoggingSetup.Setup(cfg);
+                LoggingSetup.Setup(cfg, configPath);
             }
             else if (TerminalCapabilities.IsInteractive)
             {

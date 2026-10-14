@@ -240,7 +240,7 @@ veeam-vhc-aws tracks finding state between runs so you only get notified when so
 | Problem disappears | `RESOLVED` notification fires |
 | Problem comes back later | Treated as new — alert fires again |
 
-State is stored in `veeam-vhc-aws-state.json`. A relative `global.state_file` is resolved from the directory that contains the config file, not from the process working directory. The Windows installer writes an absolute path under `C:\ProgramData\VHC\`. Deleting the state file resets all state. Every existing finding alerts again on the next run.
+State is stored in `veeam-vhc-aws-state.json`. A relative `global.state_file` is resolved from the directory that contains the config file, not from the process working directory. Log files, the state file, and JSON file output paths must stay inside that directory. The program rejects `..` and a symlink that points outside it. Deleting the state file resets all state. Every existing finding alerts again on the next run.
 
 Deduplication is **on by default** for all output handlers. To disable it for a specific handler (e.g., to always send every alert regardless of state), add `deduplicate: false`:
 
