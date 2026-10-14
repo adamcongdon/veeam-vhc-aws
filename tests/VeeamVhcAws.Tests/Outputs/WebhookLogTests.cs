@@ -27,7 +27,7 @@ public class WebhookLogTests
         handler.Emit(Sample(Severity.Warning));
 
         Assert.Equal(
-            "Webhook skipped for hooks.example.com — severity below threshold (critical)",
+            "Webhook skipped for hooks.example.com — severity below threshold (Critical)",
             string.Join("\n", handler.Logs));
     }
 

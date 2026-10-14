@@ -8,11 +8,6 @@ namespace VeeamVhcAws.Core.Logging;
 
 public static class LoggingSetup
 {
-    private static readonly string[] SensitivePatterns = new[]
-    {
-        "password", "Password", "access_token", "Authorization", "Bearer", "Basic"
-    };
-
     public static void Setup(Dictionary<string, object> config)
     {
         var globalCfg = config.GetSection("global");
@@ -200,39 +195,5 @@ public static class LoggingSetup
         {
             // Best effort — don't block startup if drive info is unavailable
         }
-    }
-
-    public static string RedactSensitive(string message)
-    {
-        // Simple redaction for log output
-        var result = message;
-        foreach (var pattern in SensitivePatterns)
-        {
-            var idx = result.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
-            while (idx >= 0)
-            {
-                // Find the value after = or : or space
-                var valueStart = result.IndexOfAny(new[] { '=', ':', ' ' }, idx + pattern.Length);
-                if (valueStart >= 0 && valueStart < result.Length - 1)
-                {
-                    valueStart++;
-                    // Skip whitespace and quotes
-                    while (valueStart < result.Length && (result[valueStart] == ' ' || result[valueStart] == '"' || result[valueStart] == '\''))
-                        valueStart++;
-
-                    var valueEnd = valueStart;
-                    while (valueEnd < result.Length && result[valueEnd] != ' ' && result[valueEnd] != ',' &&
-                           result[valueEnd] != '"' && result[valueEnd] != '\'' && result[valueEnd] != '}' &&
-                           result[valueEnd] != ']')
-                        valueEnd++;
-
-                    if (valueEnd > valueStart)
-                        result = result[..valueStart] + "***REDACTED***" + result[valueEnd..];
-                }
-                idx = result.IndexOf(pattern, idx + pattern.Length + 14, StringComparison.OrdinalIgnoreCase);
-                if (idx < 0) break;
-            }
-        }
-        return result;
     }
 }
