@@ -407,7 +407,7 @@ output:
 
 ### Logging
 
-Log files rotate daily. On Windows standalone installs, logs are written to `C:\ProgramData\VHC\logs\`. Key options:
+Log files rotate daily. The log path must stay inside the directory that contains the config file. Key options:
 
 ```yaml
 global:
