@@ -29,7 +29,7 @@ public class LoggingSetupTests
                         ["level"] = "INFO",
                     },
                 },
-            });
+            }, Path.Combine(root, "veeam-vhc-aws.yaml"));
             Log.Information("fallback-proof");
             Log.CloseAndFlush();
 
