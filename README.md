@@ -136,8 +136,9 @@ veeam-vhc-aws repo-health -c config.yaml
 veeam-vhc-aws retention -c config.yaml
 veeam-vhc-aws worker-health -c config.yaml
 
-# Prometheus HTTP server (long-running mode)
+# Prometheus HTTP server (long-running mode). Listens on 127.0.0.1 unless --bind is set.
 veeam-vhc-aws serve -c config.yaml --port 9100 --interval 300
+veeam-vhc-aws serve -c config.yaml --bind 10.1.2.3 --port 9100
 
 # Test connectivity to all configured servers (live spinners + actionable error hints)
 veeam-vhc-aws test-connection -c config.yaml
@@ -160,6 +161,8 @@ veeam-vhc-aws version
 # Suppress all interactive output (for use in scripts or CI)
 veeam-vhc-aws all -c config.yaml --no-interactive
 ```
+
+`veeam-vhc-aws serve` listens on 127.0.0.1 unless you set `--bind`. A prometheus output in server mode also listens on 127.0.0.1.
 
 ### Web Admin GUI
 

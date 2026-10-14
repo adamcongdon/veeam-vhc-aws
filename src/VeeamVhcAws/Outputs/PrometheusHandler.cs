@@ -98,7 +98,7 @@ public class PrometheusHandler : IOutputHandler
         }
         else if (_mode == "server" && !_serverStarted)
         {
-            var server = new MetricServer(port: _port, registry: _registry);
+            var server = new MetricServer(hostname: "127.0.0.1", port: _port, registry: _registry);
             server.Start();
             _serverStarted = true;
             Logger.Information("Prometheus metric server started on port {Port}", _port);

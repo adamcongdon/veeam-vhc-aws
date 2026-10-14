@@ -1,5 +1,7 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Net;
+using System.Net.Sockets;
 using VeeamVhcAws.Commands;
 using Xunit;
 
@@ -36,5 +38,39 @@ public class ServeBindTests
         Assert.Contains("--bind", text);
         Assert.Contains("127.0.0.1", text);
         Assert.Contains("non-loopback", text);
+    }
+
+    [Fact]
+    public async Task LoopbackMetricServer_AcceptsLocalhostAndNoOtherLocalAddress()
+    {
+        var port = FreePort();
+        var server = new Prometheus.MetricServer(hostname: "127.0.0.1", port: port);
+        server.Start();
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            var response = await client.GetAsync($"http://127.0.0.1:{port}/metrics/");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var hexPort = port.ToString("X4");
+            var rows = File.ReadAllLines("/proc/net/tcp")
+                .Where(line => line.Contains(":" + hexPort, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            Assert.NotEmpty(rows);
+            Assert.All(rows, row => Assert.Contains("0100007F:" + hexPort, row, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            server.Stop();
+        }
+    }
+
+    private static int FreePort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
     }
 }
