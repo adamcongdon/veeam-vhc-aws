@@ -73,6 +73,29 @@ public class ConfigPathJailTests : IDisposable
     }
 
     [Fact]
+    public void StateFile_UnderDataDirectory_IsAccepted_AndAPathOutsideBothRoots_IsRejected()
+    {
+        var dataDir = Path.Combine(Path.GetDirectoryName(_dir)!, "data");
+        Directory.CreateDirectory(dataDir);
+        var stateFile = Path.Combine(dataDir, "veeam-vhc-aws-state.json");
+        File.WriteAllText(_configPath,
+            "global:\n  data_directory: '" + dataDir + "'\n  state_file: '" + stateFile + "'\n");
+
+        Assert.Equal(Path.GetFullPath(stateFile), ConfigLoader.ResolveStateFile(_configPath));
+
+        var outside = Path.Combine(_outside, "state.json");
+        File.WriteAllText(_configPath,
+            "global:\n  data_directory: '" + dataDir + "'\n  state_file: '" + outside + "'\n");
+        var rejected = Assert.Throws<InvalidOperationException>(() => ConfigLoader.ResolveStateFile(_configPath));
+        Assert.Equal("Path is outside the config directory.", rejected.Message);
+
+        File.WriteAllText(_configPath,
+            "global:\n  data_directory: '" + dataDir + "'\n  state_file: '../data/veeam-vhc-aws-state.json'\n");
+        var relative = Assert.Throws<InvalidOperationException>(() => ConfigLoader.ResolveStateFile(_configPath));
+        Assert.Equal("Path is outside the config directory.", relative.Message);
+    }
+
+    [Fact]
     public void StateFile_StillResolvesBesideTheConfig_AndRejectsAnEscape()
     {
         File.WriteAllText(_configPath, "global:\n  state_file: ./veeam-vhc-aws-state.json\n");
