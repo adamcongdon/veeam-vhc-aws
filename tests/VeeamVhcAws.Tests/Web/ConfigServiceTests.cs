@@ -174,6 +174,7 @@ public class ConfigServiceTests : IDisposable
     {
         var initial = "output:\n  - type: webhook\n    url: https://hooks.example/secret\n    template: generic\n    allow_loopback: true\n";
         var svc = BuildService(initial);
+        var loaded = svc.Load();
 
         svc.SaveOutputs(new[]
         {
@@ -181,7 +182,7 @@ public class ConfigServiceTests : IDisposable
             {
                 ["url"] = "https://hooks.example/secret",
                 ["template"] = "ntfy",
-            }, new HashSet<string>()),
+            }, new HashSet<string>(), loaded.Outputs[0].Id),
         });
 
         var output = ConfigLoader.LoadConfig(_configPath).GetListOfSections("output")[0];
@@ -195,6 +196,7 @@ public class ConfigServiceTests : IDisposable
     {
         var initial = "output:\n  - type: email\n    smtp_host: mail.example.com\n    smtp_port: 587\n    from_addr: a@b\n    to_addrs: c@d\n    smtp_username: user\n    smtp_password: \"ENC:originalcipher\"\n    use_tls: true\n";
         var svc = BuildService(initial);
+        var loaded = svc.Load();
 
         var edit = new OutputEdit(
             "email",
@@ -208,7 +210,8 @@ public class ConfigServiceTests : IDisposable
                 ["smtp_password"] = "********",
                 ["use_tls"] = true,
             },
-            new HashSet<string>()); // no secret changed
+            new HashSet<string>(),
+            loaded.Outputs[0].Id);
 
         svc.SaveOutputs(new[] { edit });
 
