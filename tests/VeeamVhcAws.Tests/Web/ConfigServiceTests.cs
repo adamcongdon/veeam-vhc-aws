@@ -218,6 +218,43 @@ public class ConfigServiceTests : IDisposable
     }
 
     [Fact]
+    public void SaveOutputs_DeleteHandlerInFront_KeepsTheEmailPassword()
+    {
+        var svc = BuildService("""
+            output:
+              - type: webhook
+                url: https://hooks.example/front
+                template: slack
+              - type: email
+                smtp_host: mail.example.com
+                smtp_port: 587
+                from_addr: a@b
+                to_addrs: c@d
+                smtp_username: user
+                smtp_password: "ENC:emailcipher"
+            """);
+        var email = svc.Load().Outputs[1];
+
+        svc.SaveOutputs(new[]
+        {
+            new OutputEdit("email", new Dictionary<string, object?>
+            {
+                ["smtp_host"] = "mail.example.com",
+                ["smtp_port"] = 587,
+                ["from_addr"] = "a@b",
+                ["to_addrs"] = "c@d",
+                ["smtp_username"] = "user",
+                ["smtp_password"] = "********",
+            }, new HashSet<string>(), email.Id),
+        });
+
+        var outputs = ConfigLoader.LoadConfig(_configPath).GetListOfSections("output");
+        Assert.Single(outputs);
+        Assert.Equal("email", outputs[0].Get("type", ""));
+        Assert.Equal("ENC:emailcipher", outputs[0].Get("smtp_password", ""));
+    }
+
+    [Fact]
     public void SaveOutputs_EmailWithChangedPassword_ReobfuscatesNewValue()
     {
         var initial = "output:\n  - type: email\n    smtp_host: mail.example.com\n    smtp_port: 587\n    from_addr: a@b\n    to_addrs: c@d\n    smtp_username: user\n    smtp_password: \"ENC:originalcipher\"\n";
