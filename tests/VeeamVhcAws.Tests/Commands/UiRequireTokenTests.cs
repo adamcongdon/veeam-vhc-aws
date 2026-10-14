@@ -1,3 +1,4 @@
+using System.CommandLine;
 using VeeamVhcAws.Commands;
 using Xunit;
 
