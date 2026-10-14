@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using VeeamVhcAws.Web;
 using Xunit;
 
@@ -36,11 +38,10 @@ public class AdminAuthTests
             {"findings":{"alert-1":{"severity":"warning","resource":"repo","message":"bad"}}}
             """);
         var port = FreePort();
-        using var cts = new CancellationTokenSource();
-        var run = WebHost.RunAsync(
+        var app = WebHost.Build(
             new WebHostOptions(config, "127.0.0.1", port),
-            new AuthOptions { RequireToken = true, Token = Token },
-            cts.Token);
+            new AuthOptions { RequireToken = true, Token = Token });
+        await app.StartAsync();
         using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
         try
         {
@@ -57,11 +58,21 @@ public class AdminAuthTests
             var bare = await client.PostAsync("/api/alerts/alert-1/suppress?t=" + Token, new StringContent(""));
             Assert.Equal(HttpStatusCode.BadRequest, bare.StatusCode);
             Assert.DoesNotContain("suppressed_at", File.ReadAllText(state));
+
+            var antiforgery = app.Services.GetRequiredService<IAntiforgery>();
+            var tokenContext = new DefaultHttpContext { RequestServices = app.Services };
+            var tokens = antiforgery.GetAndStoreTokens(tokenContext);
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/alerts/alert-1/suppress?t=" + Token);
+            request.Headers.TryAddWithoutValidation("Cookie", tokenContext.Response.Headers.SetCookie.ToString().Split(';')[0]);
+            request.Headers.TryAddWithoutValidation("RequestVerificationToken", tokens.RequestToken);
+            var accepted = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+            Assert.Contains("suppressed_at", File.ReadAllText(state));
         }
         finally
         {
-            cts.Cancel();
-            try { await run.WaitAsync(TimeSpan.FromSeconds(5)); } catch (OperationCanceledException) { }
+            await app.StopAsync();
+            await app.DisposeAsync();
             Directory.Delete(dir, recursive: true);
         }
     }
