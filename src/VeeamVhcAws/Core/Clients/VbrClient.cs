@@ -339,17 +339,6 @@ public class VbrClient : IVbrClient
         return ExtractDataList(result);
     }
 
-    public List<Dictionary<string, object>> RescanRepositories(List<string> repoIds)
-    {
-        var results = new List<Dictionary<string, object>>();
-        foreach (var repoId in repoIds)
-        {
-            var result = Request("POST", $"/api/v1/backupInfrastructure/repositories/{repoId}/rescan");
-            results.Add(result);
-        }
-        return results;
-    }
-
     public Dictionary<string, object> GetServerInfo()
     {
         return Request("GET", "/api/v1/serverInfo");

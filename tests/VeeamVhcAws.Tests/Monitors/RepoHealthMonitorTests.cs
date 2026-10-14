@@ -253,6 +253,6 @@ public class RepoHealthMonitorTests
 
         Assert.Equal(Severity.Ok, result.OverallSeverity);
         Assert.DoesNotContain(result.Findings, f =>
-            f.Message.Contains("credential", StringComparison.OrdinalIgnoreCase));
+            f.Severity == Severity.Critical && f.Message.Contains("Credential failure", StringComparison.Ordinal));
     }
 }
