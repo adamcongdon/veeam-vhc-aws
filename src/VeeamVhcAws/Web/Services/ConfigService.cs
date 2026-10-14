@@ -1,3 +1,4 @@
+using System.Globalization;
 using VeeamVhcAws.Core.Config;
 using VeeamVhcAws.Ui;
 
@@ -5,7 +6,7 @@ namespace VeeamVhcAws.Web.Services;
 
 public record ServerView(string Name, string Type, string Url, string Username, bool VerifySsl, string ApiVersion);
 
-public record OutputView(string Type, Dictionary<string, object?> Fields);
+public record OutputView(string Type, Dictionary<string, object?> Fields, string? Id = null);
 
 public record ConfigSnapshot(
     string ConfigPath,
@@ -20,7 +21,7 @@ public record ConfigSnapshot(
 
 public record ServerEdit(string Name, string Type, string Url, string Username, string Password, bool PasswordChanged, bool VerifySsl, string ApiVersion);
 
-public record OutputEdit(string Type, Dictionary<string, object?> Fields, IReadOnlySet<string> ChangedSecretKeys);
+public record OutputEdit(string Type, Dictionary<string, object?> Fields, IReadOnlySet<string> ChangedSecretKeys, string? Id = null);
 
 public class ConfigService
 {
@@ -54,13 +55,13 @@ public class ConfigService
             .ToList();
 
         var outputs = cfg.GetListOfSections("output")
-            .Select(o =>
+            .Select((o, index) =>
             {
                 var fields = new Dictionary<string, object?>();
                 var outputType = o.Get("type", "unknown");
                 foreach (var (k, v) in o)
                     if (k != "type") fields[k] = MaskSecret(outputType, k, v);
-                return new OutputView(o.Get("type", "unknown"), fields);
+                return new OutputView(o.Get("type", "unknown"), fields, LoadedOutputId(index));
             })
             .ToList();
 
@@ -153,10 +154,7 @@ public class ConfigService
                         k.Equals("url", StringComparison.OrdinalIgnoreCase) &&
                         v is string submittedUrl && submittedUrl == "********")
                     {
-                        entry[k] = i < existingList.Count &&
-                            existingList[i].Get("type", "").Equals("webhook", StringComparison.OrdinalIgnoreCase)
-                            ? existingList[i].Get("url", "")
-                            : "";
+                        entry[k] = WebhookUrlFor(o.Id, existingList);
                     }
                     else if (IsSecretKey(k))
                     {
@@ -223,6 +221,25 @@ public class ConfigService
             existing[sectionName] = section;
             WriteYaml(existing);
         }
+    }
+
+    private const string LoadedOutputPrefix = "loaded:";
+
+    private static string LoadedOutputId(int index) =>
+        LoadedOutputPrefix + index.ToString(CultureInfo.InvariantCulture);
+
+    private static string WebhookUrlFor(string? id, IReadOnlyList<Dictionary<string, object>> existingList)
+    {
+        if (string.IsNullOrEmpty(id) || !id.StartsWith(LoadedOutputPrefix, StringComparison.Ordinal))
+            return "";
+        if (!int.TryParse(id.AsSpan(LoadedOutputPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var index))
+            return "";
+        if (index < 0 || index >= existingList.Count)
+            return "";
+        var prior = existingList[index];
+        if (!prior.Get("type", "").Equals("webhook", StringComparison.OrdinalIgnoreCase))
+            return "";
+        return prior.Get("url", "");
     }
 
     private static bool IsSecretKey(string key) =>

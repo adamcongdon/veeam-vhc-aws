@@ -295,6 +295,7 @@ public class ConfigServiceTests : IDisposable
                 url: https://hooks.example/services/T123/SECRET
                 template: slack
             """);
+        var loaded = svc.Load();
 
         svc.SaveOutputs(new[]
         {
@@ -302,7 +303,7 @@ public class ConfigServiceTests : IDisposable
             {
                 ["url"] = "********",
                 ["template"] = "ntfy",
-            }, new HashSet<string>()),
+            }, new HashSet<string>(), loaded.Outputs[0].Id),
         });
 
         var output = ConfigLoader.LoadConfig(_configPath).GetListOfSections("output")[0];
