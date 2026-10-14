@@ -83,13 +83,11 @@ public class AuthMiddleware
         return !string.IsNullOrEmpty(cookieToken) && TokensEqual(cookieToken, _options.Token);
     }
 
-    private static bool TokensEqual(string a, string b)
-    {
-        if (a.Length != b.Length) return false;
-        var aBytes = System.Text.Encoding.UTF8.GetBytes(a);
-        var bBytes = System.Text.Encoding.UTF8.GetBytes(b);
-        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
-    }
+    internal static byte[] TokenDigest(string value) =>
+        SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value));
+
+    internal static bool TokensEqual(string a, string b) =>
+        CryptographicOperations.FixedTimeEquals(TokenDigest(a), TokenDigest(b));
 
     public static string GenerateToken()
     {
