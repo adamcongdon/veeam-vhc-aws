@@ -101,4 +101,30 @@ public class OutputsPageTests
         Assert.Contains("to_addrs=ops@example.com, oncall@example.com", cut.Markup);
         Assert.DoesNotContain("List`1", cut.Markup);
     }
+
+    [Fact]
+    public void WebhookReload_ShowsTheMask_AndKeepsTheStoredUrl()
+    {
+        using var ui = new UiHarness(writeConfig: false);
+        var cut = ui.Context.RenderComponent<OutputsPage>();
+        UiHarness.Click(cut, "+ Add Your First Handler");
+        cut.Find("#output-url").Input("https://hooks.example/services/T123/SECRET");
+        cut.Find("#output-template").Change("ntfy");
+        UiHarness.Click(cut, "Save");
+
+        var again = ui.Context.RenderComponent<OutputsPage>();
+        Assert.Contains("********", again.Markup);
+        Assert.DoesNotContain("T123", again.Markup);
+        Assert.DoesNotContain("SECRET", again.Markup);
+        var yaml = File.ReadAllText(ui.ConfigPath);
+        Assert.Contains("https://hooks.example/services/T123/SECRET", yaml);
+
+        UiHarness.Click(again, "Edit webhook 1");
+        again.Find("#output-template").Change("slack");
+        UiHarness.Click(again, "Save");
+        var saved = File.ReadAllText(ui.ConfigPath);
+        Assert.Contains("https://hooks.example/services/T123/SECRET", saved);
+        Assert.Contains("slack", saved);
+        Assert.DoesNotContain("********", saved);
+    }
 }

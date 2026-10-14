@@ -270,6 +270,48 @@ public class ConfigServiceTests : IDisposable
     }
 
     [Fact]
+    public void Load_MasksWebhookUrl_AndLeavesPushgatewayVisible()
+    {
+        var svc = BuildService("""
+            output:
+              - type: webhook
+                url: https://hooks.example/services/T123/SECRET
+                template: slack
+              - type: prometheus
+                mode: pushgateway
+                url: http://10.1.2.3:9091
+            """);
+        var snap = svc.Load();
+        Assert.Equal("********", snap.Outputs[0].Fields["url"]);
+        Assert.Equal("http://10.1.2.3:9091", snap.Outputs[1].Fields["url"]);
+    }
+
+    [Fact]
+    public void SaveOutputs_MaskedWebhookUrl_KeepsTheStoredUrl()
+    {
+        var svc = BuildService("""
+            output:
+              - type: webhook
+                url: https://hooks.example/services/T123/SECRET
+                template: slack
+            """);
+
+        svc.SaveOutputs(new[]
+        {
+            new OutputEdit("webhook", new Dictionary<string, object?>
+            {
+                ["url"] = "********",
+                ["template"] = "ntfy",
+            }, new HashSet<string>()),
+        });
+
+        var output = ConfigLoader.LoadConfig(_configPath).GetListOfSections("output")[0];
+        Assert.Equal("https://hooks.example/services/T123/SECRET", output.Get("url", ""));
+        Assert.Equal("ntfy", output.Get("template", ""));
+        Assert.DoesNotContain("********", File.ReadAllText(_configPath));
+    }
+
+    [Fact]
     public void Load_PasswordMasked_NotExposedInSnapshot()
     {
         var initial = "servers:\n  - name: s\n    type: vbr\n    url: https://x:9419\n    username: u\n    password: \"ENC:secretvalue\"\n";
