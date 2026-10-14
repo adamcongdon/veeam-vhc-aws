@@ -73,7 +73,7 @@ public class ConfigServiceTests : IDisposable
         var edit = new ServerEdit(
             Name: "keep-pw",
             Type: "vbr",
-            Url: "https://x:9420",
+            Url: "https://x:9419",
             Username: "u",
             Password: "",
             PasswordChanged: false,
@@ -85,8 +85,43 @@ public class ConfigServiceTests : IDisposable
         var reloaded = ConfigLoader.LoadConfig(_configPath);
         var server = reloaded.GetListOfSections("servers")[0];
         Assert.Equal("ENC:originalciphertext", server.Get("password", ""));
-        Assert.Equal("https://x:9420", server.Get("url", ""));
+        Assert.Equal("https://x:9419", server.Get("url", ""));
         Assert.True(server.Get("verify_ssl", false));
+    }
+
+    [Fact]
+    public void SaveServers_UrlChangeWithoutNewPassword_IsRejected()
+    {
+        var initial = "servers:\n  - name: keep-pw\n    type: vbr\n    url: https://x:9419\n    username: u\n    password: \"ENC:originalciphertext\"\n    verify_ssl: false\n";
+        var svc = BuildService(initial);
+        var before = File.ReadAllText(_configPath);
+
+        var edit = new ServerEdit(
+            Name: "keep-pw",
+            Type: "vbr",
+            Url: "https://x:9420",
+            Username: "u",
+            Password: "",
+            PasswordChanged: false,
+            VerifySsl: true,
+            ApiVersion: "1.3-rev1");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => svc.SaveServers(new[] { edit }));
+        Assert.Equal("A server URL change requires a new password.", ex.Message);
+        Assert.Equal(before, File.ReadAllText(_configPath));
+    }
+
+    [Fact]
+    public void SaveServers_HttpUrl_IsStored()
+    {
+        var svc = BuildService("servers: []\n");
+        svc.SaveServers(new[]
+        {
+            new ServerEdit("plain", "vbr", "http://vbr.internal:9419", "u", "pw", true, false, ""),
+        });
+
+        var server = ConfigLoader.LoadConfig(_configPath).GetListOfSections("servers")[0];
+        Assert.Equal("http://vbr.internal:9419", server.Get("url", ""));
     }
 
     [Fact]
