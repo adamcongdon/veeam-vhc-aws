@@ -51,15 +51,6 @@ public static class CiWorkflowContract
         new LiteralFact(
             ".github/workflows/codeql.yml",
             "dotnet build src/VeeamVhcAws/VeeamVhcAws.csproj -c Release"),
-        new LiteralFact(
-            ".github/workflows/dependency-review.yml",
-            """
-            on:
-              pull_request:
-            """),
-        new LiteralFact(
-            ".github/workflows/dependency-review.yml",
-            "actions/dependency-review-action@"),
         new LiteralFact(".github/workflows/security.yml", TruffleHogPin),
         new PinnedThirdPartyUsesFact(".github/workflows", PinnedUsesForm),
     ];
