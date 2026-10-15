@@ -486,6 +486,7 @@ Start-ScheduledTask -TaskName "Veeam VHC AWS"
 #### Behavior changes (unreleased)
 
 - `setup --template` and the README samples write `verify_ssl: true`, matching the web UI, the wizard, and `config/example.yaml`. Set `verify_ssl: false` only for a lab server with a self-signed certificate. `test-connection` suggests it when the certificate is rejected.
+- A partial `global:` block (for example only `timeout_seconds`, or `logging:` with only `level`) now keeps the defaults for every key it leaves out. Before, the partial block replaced the defaults, and monitors fell back to a 120-second `session_timeout_seconds` while the Settings page showed 600. The default is now 600 everywhere. An empty `global:` line also keeps the defaults.
 
 ---
 
