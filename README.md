@@ -287,7 +287,7 @@ The daily summary uses your configured output handlers (same as alerts) but bypa
 | 2 | CRITICAL |
 | 3 | ERROR |
 
-The worst severity across all findings determines the exit code, making it CI/CD-friendly.
+The worst severity across all findings determines the exit code, making it CI/CD-friendly. A suppressed finding (`captures suppress`, the Alerts page, or `suppressions` in the config) does not count toward the exit code or the monitor's overall severity. A monitor that reported errors stays at least WARNING, because errors cannot be suppressed.
 
 ### Configuration
 
