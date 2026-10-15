@@ -152,7 +152,8 @@ veeam-vhc-aws captures list -c config.yaml
 veeam-vhc-aws captures suppress <key> -c config.yaml
 veeam-vhc-aws captures unsuppress <key> -c config.yaml
 
-# Encrypt plaintext passwords, and rewrap legacy ENC: values, with the machine-local key
+# Encrypt plaintext secrets (any key whose name contains password, token or secret,
+# the same keys the web UI encrypts) and rewrap legacy ENC: values, with the machine-local key
 veeam-vhc-aws encrypt-config -c config.yaml
 
 # Print version
