@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Xunit;
 using VeeamVhcAws.Commands;
+using VeeamVhcAws.Infrastructure;
 
 namespace VeeamVhcAws.Tests.Ci;
 
@@ -29,6 +30,20 @@ public class ShippedConfigSamplesTests
         var values = VerifySslLine.Matches(text).Select(m => m.Groups[1].Value).ToList();
         Assert.NotEmpty(values);
         Assert.All(values, value => Assert.Equal("true", value));
+    }
+
+    [Theory]
+    [InlineData("config/example.yaml")]
+    [InlineData("src/VeeamVhcAws/config/example.yaml")]
+    public void ExampleConfig_StatesTheParallelThresholdTheRunnerUses(string sample)
+    {
+        var threshold = (int)typeof(MonitorRunner)
+            .GetField("ParallelThreshold", BindingFlags.NonPublic | BindingFlags.Static)!
+            .GetRawConstantValue()!;
+        var text = SampleText(sample);
+
+        Assert.DoesNotContain("Servers >5", text);
+        Assert.Contains($"{threshold + 1}+ servers run in parallel", text);
     }
 
     internal static string SampleText(string sample) => sample switch
