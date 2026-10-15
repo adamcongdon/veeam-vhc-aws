@@ -246,17 +246,7 @@ public static class SetupWizard
             return;
         }
 
-        // Build config and write
-        var config = ConfigBuilder.Build(answers);
-        var yaml = ConfigBuilder.ToYaml(config);
-
-        var dir = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(dir))
-            Directory.CreateDirectory(dir);
-
-        File.WriteAllText(outputPath, yaml);
-
-        var fullPath = Path.GetFullPath(outputPath);
+        var fullPath = SaveConfig(answers, outputPath);
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"[green]Configuration saved to:[/] {fullPath.EscapeMarkup()}");
         try
@@ -289,5 +279,21 @@ public static class SetupWizard
         AnsiConsole.MarkupLine("  [bold]3.[/] Schedule automated monitoring:");
         AnsiConsole.MarkupLine($"       [cyan]veeam-vhc-aws setup --help[/] for scheduling instructions");
         AnsiConsole.WriteLine();
+    }
+
+    /// <summary>
+    /// Build the config from the wizard answers and write it to outputPath. Returns the full path.
+    /// </summary>
+    internal static string SaveConfig(WizardAnswers answers, string outputPath)
+    {
+        var config = ConfigBuilder.Build(answers);
+        var yaml = ConfigBuilder.ToYaml(config);
+
+        var dir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+
+        File.WriteAllText(outputPath, yaml);
+        return Path.GetFullPath(outputPath);
     }
 }
