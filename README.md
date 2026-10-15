@@ -337,14 +337,14 @@ servers:
     username: DOMAIN\backupadmin
     password: "secret"
     api_version: "1.3-rev1"
-    verify_ssl: false
+    verify_ssl: true   # false only for a lab with a self-signed certificate
 
   - name: aws-backup
     type: vbaws
     url: https://vbaws-appliance
     username: admin
     password: "secret"
-    verify_ssl: false
+    verify_ssl: true
 ```
 
 > [!TIP]
@@ -482,6 +482,10 @@ Start-ScheduledTask -TaskName "Veeam VHC AWS"
 | Version | New config key | Default | Notes |
 |---------|---------------|---------|-------|
 | v1.0.0.44+ | `global.session_timeout_seconds` | `600` | Timeout for `/api/v1/sessions` calls. Configurable via the web UI Settings page or YAML. |
+
+#### Behavior changes (unreleased)
+
+- `setup --template` and the README samples write `verify_ssl: true`, matching the web UI, the wizard, and `config/example.yaml`. Set `verify_ssl: false` only for a lab server with a self-signed certificate. `test-connection` suggests it when the certificate is rejected.
 
 ---
 
