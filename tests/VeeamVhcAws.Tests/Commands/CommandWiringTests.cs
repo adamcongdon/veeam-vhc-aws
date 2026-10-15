@@ -104,7 +104,7 @@ public class CommandWiringTests : IDisposable
         Assert.Contains("password: \"ENC:", File.ReadAllText(path));
     }
 
-    [Fact(Skip = "Found: encrypt-config only declares --config. Every other command (and the README) accepts -c, so `encrypt-config -c <file>` fails to parse. Product fix is out of scope for this test PR.")]
+    [Fact]
     public void EncryptConfig_AcceptsTheShortConfigAlias()
     {
         var path = WriteServerConfig("plain-pw");
