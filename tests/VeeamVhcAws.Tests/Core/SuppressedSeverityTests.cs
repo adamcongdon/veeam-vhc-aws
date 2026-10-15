@@ -76,6 +76,19 @@ public class SuppressedSeverityTests : IDisposable
     }
 
     [Fact]
+    public void SuppressedFinding_WithMonitorErrors_StaysAtWarning()
+    {
+        var state = new FindingState(_statePath, new List<string> { "immutability disabled" });
+        var results = Run(new Finding(Severity.Critical, "repo:a", "Repository immutability disabled"));
+        results[0].Errors.Add("GET /api/v1/backupInfrastructure/repositories/states timed out");
+
+        var (filtered, _) = state.ProcessResults(results);
+
+        Assert.Equal(Severity.Warning, filtered[0].OverallSeverity);
+        Assert.Equal(1, CommandHelpers.WorstExitCode(results));
+    }
+
+    [Fact]
     public void UnsuppressedRun_KeepsMonitorSeverity()
     {
         var state = new FindingState(_statePath);
