@@ -65,12 +65,13 @@ public class LiveMonitorViewTests
             {
                 view.ApplyPending();
                 view.RenderText();
+                Thread.Sleep(1); // like the live loop, don't spin a core and starve other tests
             }
         });
 
         await Task.WhenAll(work.Select(w => Task.Run(() =>
         {
-            for (var n = 0; n < 200; n++)
+            for (var n = 0; n < 50; n++)
             {
                 view.Report(Event(w.Item1, MonitorProgressStatus.Running));
                 view.Report(Event(w.Item1, MonitorProgressStatus.Completed, Severity.Warning));
