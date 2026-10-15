@@ -1,4 +1,5 @@
 using Spectre.Console;
+using VeeamVhcAws.Core.Config;
 using VeeamVhcAws.Scheduling;
 
 namespace VeeamVhcAws.Ui;
@@ -286,6 +287,10 @@ public static class SetupWizard
     /// </summary>
     internal static string SaveConfig(WizardAnswers answers, string outputPath)
     {
+        // Seal passwords with <config dir>/.veeam-vhc-aws.key, the key every later command
+        // binds with -c. Unbound, the store falls back to ~/.vhc/secret.key (ProgramData on
+        // Windows) and the saved passwords cannot be opened.
+        SecretKeyStore.BindProcessDirectory(outputPath);
         var config = ConfigBuilder.Build(answers);
         var yaml = ConfigBuilder.ToYaml(config);
 
