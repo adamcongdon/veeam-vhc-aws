@@ -16,6 +16,17 @@ public class UserGuideTests
     }
 
     [Fact]
+    public void TopSections_ListEveryH2WithItsRenderedAnchor()
+    {
+        var sections = UserGuide.TopSections;
+        Assert.Equal("Already using it with YAML? Start here", sections[0].Title);
+        Assert.Contains(sections, s => s.Title == "Common questions");
+        foreach (var s in sections)
+            Assert.Contains($"<h2 id=\"{s.Id}\"", UserGuide.Html);
+        Assert.Equal(Regex.Matches(UserGuide.Html, "<h2 ").Count, sections.Count);
+    }
+
+    [Fact]
     public void Headings_GetAnchorsMatchingChecklistLinks()
     {
         var html = UserGuide.Html;
