@@ -27,7 +27,10 @@ public class UiPortDetectionTests
         await app.StartAsync();
         try
         {
-            Assert.Equal(UiCommand.PortState.OursUi, await UiCommand.DetectPortAsync(port, Timeout));
+            // A token-protected instance answers the anonymous probe with 401 plus the marker, so the
+            // second launch knows to open the browser with the token instead of landing on a 401 page.
+            var expected = requireToken ? UiCommand.PortState.OursUiTokenRequired : UiCommand.PortState.OursUi;
+            Assert.Equal(expected, await UiCommand.DetectPortAsync(port, Timeout));
         }
         finally
         {

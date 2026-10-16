@@ -21,7 +21,7 @@ public static class GettingStarted
             new(hasRealOutput, "Send alerts somewhere",
                 "Add email, a webhook, a JSON file or Prometheus so alerts reach you.", "outputs", "Open Outputs"),
             new(state.LastRun is not null, "Wait for the first scheduled run",
-                "The scheduled task runs every 5 minutes by default.", "help#set-it-up-from-scratch", "Set up the scheduled task"),
+                "The scheduled task runs every 5 minutes by default.", "help#set-it-up-from-scratch", "How the schedule works"),
         ];
     }
 

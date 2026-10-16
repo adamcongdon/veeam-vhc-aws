@@ -74,12 +74,16 @@ public static class UiCommand
                 context.ExitCode = 1;
                 return;
             }
-            if (existing == PortState.OursUi)
+            if (existing is PortState.OursUi or PortState.OursUiTokenRequired)
             {
                 var runningUrl = $"http://127.0.0.1:{port}";
                 Console.WriteLine($"The admin UI is already running at {runningUrl}");
+                // The running instance may require the token even when this launch would not
+                // (it was started with --bind or --require-token). Reuse the token it reads.
+                var token = auth.RequireToken ? auth.Token
+                    : existing == PortState.OursUiTokenRequired ? ReadExistingToken(tokenPath) : null;
                 if (!noBrowser && TerminalCapabilities.IsInteractive)
-                    OpenBrowser(auth.RequireToken ? $"{runningUrl}/?t={auth.Token}" : runningUrl);
+                    OpenBrowser(string.IsNullOrEmpty(token) ? runningUrl : $"{runningUrl}/?t={token}");
                 return;
             }
 
@@ -125,7 +129,7 @@ public static class UiCommand
         return command;
     }
 
-    internal enum PortState { Free, OursUi, Foreign }
+    internal enum PortState { Free, OursUi, OursUiTokenRequired, Foreign }
 
     private static readonly TimeSpan PortProbeTimeout = TimeSpan.FromSeconds(2);
 
@@ -160,10 +164,12 @@ public static class UiCommand
                 Timeout = timeout,
             };
             using var response = await http.GetAsync($"http://127.0.0.1:{port}/", HttpCompletionOption.ResponseHeadersRead);
-            return response.Headers.TryGetValues(WebHost.IdentityHeader, out var values)
-                && values.Contains(WebHost.IdentityHeaderValue)
-                ? PortState.OursUi
-                : PortState.Foreign;
+            if (!response.Headers.TryGetValues(WebHost.IdentityHeader, out var values)
+                || !values.Contains(WebHost.IdentityHeaderValue))
+                return PortState.Foreign;
+            return response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                ? PortState.OursUiTokenRequired
+                : PortState.OursUi;
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {
@@ -189,6 +195,19 @@ public static class UiCommand
 
         var token = ReadOrCreateToken(tokenPath);
         return new AuthOptions { RequireToken = true, Token = token };
+    }
+
+    private static string? ReadExistingToken(string path)
+    {
+        try
+        {
+            var existing = File.Exists(path) ? File.ReadAllText(path).Trim() : "";
+            return existing.Length >= 32 ? existing : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static string ReadOrCreateToken(string path)
