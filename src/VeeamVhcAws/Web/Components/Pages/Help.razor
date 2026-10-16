@@ -1,0 +1,11 @@
+@page "/help"
+@using VeeamVhcAws.Web.Services
+
+<PageTitle>Help — Veeam VHC AWS</PageTitle>
+
+<h1>Help</h1>
+<p class="muted">How to use VHC AWS. The same guide ships as docs/USER_GUIDE.md.</p>
+
+<article class="guide">
+    @((MarkupString)UserGuide.Html)
+</article>
