@@ -65,7 +65,9 @@ The browser talks to the UI with role, accessible name, and the visible label te
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser fill --label Name --value lab-vbr
 ```
 
-`click` uses an exact accessible name. `wait-heading` waits for an exact heading. `wait-text` waits for a substring.
+`click` uses an exact accessible name. `wait-heading` waits for an exact heading, and fails when two headings share the name. Add `--level 1` for the page heading, as on Help, where the guide also has a `### Help`. `wait-text` waits for a substring.
+
+A launch has no Veeam server, so Alerts, Captures, and the dashboard banner only show rows from a seeded state file. `seed-state findings` writes one warning finding and one captured error. `seed-state clear` writes a `last_run` with no findings. Both overwrite this run's state file only.
 
 Do not prove a save with `GET /api/config`. That route exists, and it is not the page the operator uses. There is no suppress API; suppress happens on the page.
 
@@ -125,6 +127,7 @@ Invoke the helper by path. `chmod +x` is already set in git.
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser fill --label Name --value lab-vbr
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser select --label Type --value json_file
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-heading "Add Server"
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-heading --level 1 Help
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-text "Server 'lab-vbr' added"
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-value --label URL --value https://lab-vbr:9419
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-hidden "No servers configured yet."
@@ -133,6 +136,8 @@ Invoke the helper by path. `chmod +x` is already set in git.
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser screenshot --path /tmp/vhc-verify/evidence/<run-id>/servers/page.png
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser snapshot --path /tmp/vhc-verify/evidence/<run-id>/servers/page.aria.txt
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify assert-server --name lab-vbr --url https://lab-vbr.example:9419 --username backupadmin --password-absent verify-secret --verify-ssl true
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify seed-state findings
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify seed-state clear
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify cleanup
 ```
 

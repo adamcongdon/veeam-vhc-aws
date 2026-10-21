@@ -116,11 +116,14 @@ async function run(command) {
         timeout: command.timeout ?? 15000,
       });
       return { found: true };
-    case "wait-heading":
+    case "wait-heading": {
+      const options = { name: command.name, exact: true };
+      if (command.level) options.level = command.level;
       await page
-        .getByRole("heading", { name: command.name, exact: true })
+        .getByRole("heading", options)
         .waitFor({ timeout: command.timeout ?? 15000 });
       return { found: true };
+    }
     case "wait-hidden":
       await page.getByText(command.text, { exact: false }).first().waitFor({
         state: "hidden",

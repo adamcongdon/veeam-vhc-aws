@@ -45,7 +45,7 @@ Preconditions:
 - The password field's accessible name is **Password**.
 - **Verify SSL certificate** starts checked. A saved server shows `yes` in the table and `verify_ssl: true` in the yaml until the operator clears the box.
 - A new server rejects a blank name, a blank URL, a URL that is not absolute, or a blank username. The dialog shows that error and does not write the file.
-- Edit loads the password box as `********` and does not change the stored password unless the operator types a new one. Changing the URL without typing the password shows `A server URL change requires a new password.` and leaves the yaml unchanged. The row button is **Edit lab-vbr**.
+- Edit loads the password box as `********` and does not change the stored password unless the operator types a new one. Changing the URL without typing the password shows `A server URL change requires a new password.` and leaves the yaml unchanged. A successful edit flashes `Server 'lab-vbr' updated`. The row button is **Edit lab-vbr**.
 - Clicking the dimmed area behind a dialog does not close it. **Cancel** and Escape do.
 - The row button is **Delete lab-vbr**. The dialog button is **Confirm delete**.
 - The duplicate-name flash is `Server '<name>' already exists`. Names are compared without case sensitivity.

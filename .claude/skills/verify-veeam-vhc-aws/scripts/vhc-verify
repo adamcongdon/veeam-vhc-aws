@@ -395,8 +395,13 @@ cmd_browser() {
       browser_command "$(python3 -c 'import json,sys; print(json.dumps({"op":"wait-text","text":sys.argv[1]}))' "$1")"
       ;;
     wait-heading)
-      [ $# -eq 1 ] || die "usage: vhc-verify browser wait-heading 'Add Server'"
-      browser_command "$(python3 -c 'import json,sys; print(json.dumps({"op":"wait-heading","name":sys.argv[1]}))' "$1")"
+      local level=""
+      if [ "${1:-}" = "--level" ]; then
+        level=${2:-}
+        shift 2 || true
+      fi
+      [ $# -eq 1 ] || die "usage: vhc-verify browser wait-heading [--level 1] 'Add Server'"
+      browser_command "$(python3 -c 'import json,sys; print(json.dumps({"op":"wait-heading","name":sys.argv[1],"level":int(sys.argv[2]) if sys.argv[2] else None}))' "$1" "$level")"
       ;;
     wait-hidden)
       [ $# -eq 1 ] || die "usage: vhc-verify browser wait-hidden 'No servers configured yet.'"
@@ -445,7 +450,7 @@ cmd_browser() {
       browser_command "$(python3 -c 'import json,sys; print(json.dumps({"op":"snapshot","path":sys.argv[1]}))' "$path")"
       ;;
     *)
-      die "usage: vhc-verify browser goto|click|fill|select|wait-text|wait-heading|wait-hidden|wait-value|assert-text|assert-absent|screenshot|snapshot"
+      die "usage: vhc-verify browser goto|click|fill|select|wait-text|wait-heading [--level N]|wait-hidden|wait-value|assert-text|assert-absent|screenshot|snapshot"
       ;;
   esac
 }
@@ -488,6 +493,41 @@ print(path)
 PY
 }
 
+# Write a fixture to this run's state file. A launch has no Veeam server, so
+# Alerts, Captures, and the dashboard banner only show rows from a seeded file.
+cmd_seed_state() {
+  load_meta
+  local fixture=${1:-}
+  [ -n "${STATE_PATH:-}" ] || STATE_PATH="$DATA_DIR/veeam-vhc-aws-state.json"
+  case "$STATE_PATH" in
+    "$DATA_DIR"/*) ;;
+    *) die "state path $STATE_PATH is outside this run's data directory" ;;
+  esac
+  case "$fixture" in
+    findings)
+      cat >"$STATE_PATH" <<'EOF'
+{
+  "findings": {
+    "f1": {"severity": "warning", "server": "lab-vbr", "monitor": "repo_health", "resource": "repo-disk", "message": "disk low"}
+  },
+  "captured_errors": {
+    "abc": {"severity": "error", "server": "lab-vbr", "monitor": "repo_health", "resource": "repo-cap", "text": "disk full", "count": 2, "suppressed": false}
+  },
+  "suppressions": {}
+}
+EOF
+      ;;
+    clear)
+      cat >"$STATE_PATH" <<'EOF'
+{"last_run":"2026-10-13T12:00:00Z","findings":{},"captured_errors":{},"suppressions":{}}
+EOF
+      ;;
+    *) die "usage: vhc-verify seed-state findings|clear" ;;
+  esac
+  echo "seeded $fixture"
+  echo "state $STATE_PATH"
+}
+
 cmd_evidence_dir() {
   load_meta
   printf '%s\n' "$EVIDENCE_DIR"
@@ -517,7 +557,7 @@ cmd_cleanup() {
 
 usage() {
   cat <<EOF
-Usage: vhc-verify launch|doctor|browser|assert-server|evidence-dir|cleanup
+Usage: vhc-verify launch|doctor|browser|assert-server|seed-state|evidence-dir|cleanup
 EOF
   exit 1
 }
@@ -530,6 +570,7 @@ main() {
     doctor) cmd_doctor "$@" ;;
     browser) cmd_browser "$@" ;;
     assert-server) cmd_assert_server "$@" ;;
+    seed-state) cmd_seed_state "$@" ;;
     evidence-dir) cmd_evidence_dir "$@" ;;
     cleanup) cmd_cleanup "$@" ;;
     *) usage ;;
