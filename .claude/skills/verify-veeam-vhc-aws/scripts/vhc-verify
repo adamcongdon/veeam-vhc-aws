@@ -488,6 +488,79 @@ print(path)
 PY
 }
 
+state_path() {
+  if [ -z "${STATE_PATH:-}" ]; then
+    STATE_PATH="$DATA_DIR/veeam-vhc-aws-state.json"
+  fi
+  printf '%s\n' "$STATE_PATH"
+}
+
+# Write a state file the pages will read on their next load. The argument is a
+# fixture name from scripts/fixtures/ (without .json) or a path to a JSON file.
+cmd_seed_state() {
+  load_meta
+  [ $# -eq 1 ] || die "usage: vhc-verify seed-state findings|clear|<path.json>"
+  local src=$1 name dest
+  if [ -f "$SCRIPT_DIR/fixtures/$src.json" ]; then
+    name=$src
+    src="$SCRIPT_DIR/fixtures/$src.json"
+  elif [ -f "$src" ]; then
+    name=$(basename "$src" .json)
+  else
+    die "no fixture $1. Fixtures: $(cd "$SCRIPT_DIR/fixtures" && ls ./*.json | sed 's|^\./||; s|\.json$||' | tr '\n' ' ')"
+  fi
+  dest=$(state_path)
+  mkdir -p "$EVIDENCE_DIR/state"
+  python3 - "$src" "$dest" <<'PY'
+import json, os, sys
+src, dest = sys.argv[1:3]
+data = json.load(open(src, encoding="utf-8"))
+if not isinstance(data, dict):
+    sys.exit("state must be a JSON object")
+tmp = dest + ".seed.tmp"
+with open(tmp, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+os.replace(tmp, dest)
+PY
+  cp "$dest" "$EVIDENCE_DIR/state/seed-$name.json"
+  echo "seeded $name"
+  echo "state $dest"
+}
+
+# Copy the state file into evidence and check suppression of a key, the way
+# Alerts and Captures read it: listed under suppressions, or suppressed: true
+# on the captured row.
+cmd_assert_state() {
+  load_meta
+  local key="" want=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --suppressed) key=$2; want=true; shift 2 ;;
+      --not-suppressed) key=$2; want=false; shift 2 ;;
+      *) die "unknown assert-state arg $1" ;;
+    esac
+  done
+  [ -n "$key" ] || die "usage: vhc-verify assert-state --suppressed abc | --not-suppressed abc"
+  local path
+  path=$(state_path)
+  [ -f "$path" ] || die "state file does not exist at $path"
+  mkdir -p "$EVIDENCE_DIR/state"
+  cp "$path" "$EVIDENCE_DIR/state/after-$key.json"
+  python3 - "$path" "$key" "$want" <<'PY'
+import json, sys
+path, key, want = sys.argv[1:4]
+root = json.load(open(path, encoding="utf-8"))
+listed = key in (root.get("suppressions") or {})
+row = (root.get("captured_errors") or {}).get(key) or {}
+flag = row.get("suppressed") is True
+actual = listed or flag
+print(f"key={key} suppressions={'yes' if listed else 'no'} captured_flag={'true' if flag else 'false'}")
+if (want == "true") != actual:
+    sys.exit(f"expected suppressed={want}")
+print("state ok")
+PY
+}
+
 cmd_evidence_dir() {
   load_meta
   printf '%s\n' "$EVIDENCE_DIR"
@@ -517,7 +590,7 @@ cmd_cleanup() {
 
 usage() {
   cat <<EOF
-Usage: vhc-verify launch|doctor|browser|assert-server|evidence-dir|cleanup
+Usage: vhc-verify launch|doctor|browser|assert-server|seed-state|assert-state|evidence-dir|cleanup
 EOF
   exit 1
 }
@@ -530,6 +603,8 @@ main() {
     doctor) cmd_doctor "$@" ;;
     browser) cmd_browser "$@" ;;
     assert-server) cmd_assert_server "$@" ;;
+    seed-state) cmd_seed_state "$@" ;;
+    assert-state) cmd_assert_state "$@" ;;
     evidence-dir) cmd_evidence_dir "$@" ;;
     cleanup) cmd_cleanup "$@" ;;
     *) usage ;;

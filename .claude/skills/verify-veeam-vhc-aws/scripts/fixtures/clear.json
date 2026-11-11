@@ -1,0 +1,9 @@
+{
+  "last_run": "2026-10-13T12:00:00Z",
+  "lastSuccess": {
+    "lab-vbr:repo_health": "2026-10-13T12:00:00Z"
+  },
+  "findings": {},
+  "captured_errors": {},
+  "suppressions": {}
+}

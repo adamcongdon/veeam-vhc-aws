@@ -39,7 +39,7 @@ dotnet run --project <repo>/src/VeeamVhcAws/VeeamVhcAws.csproj -- ui \
 
 Loopback has no auth token. Do not pass `--bind 0.0.0.0`. A non-loopback bind reads or creates `~/.vhc/ui-token.txt`, which is shared by every UI on the machine.
 
-The state file defaults to `./veeam-vhc-aws-state.json`. That relative path is resolved beside the config file, not from the process working directory. Under this helper the config lives in the data directory, so the state file is `<data>/veeam-vhc-aws-state.json`. Launch prints it as `state`. The Settings page shows the same path. Pages read the file on each load, so you can write it after launch and reload. It is gitignored. Two UIs can run together only when each launch has its own `VHC_VERIFY_RUN_ID`, its own data directory, and its own port. Leave the variable unset for a single run. The helper records that run in `/tmp/vhc-verify/latest`.
+The state file defaults to `./veeam-vhc-aws-state.json`. That relative path is resolved beside the config file, not from the process working directory. Under this helper the config lives in the data directory, so the state file is `<data>/veeam-vhc-aws-state.json`. Launch prints it as `state`. The Settings page shows the same path. Pages read the file on each load, so you can seed it after launch with `vhc-verify seed-state` and reload. It is gitignored. Two UIs can run together only when each launch has its own `VHC_VERIFY_RUN_ID`, its own data directory, and its own port. Leave the variable unset for a single run. The helper records that run in `/tmp/vhc-verify/latest`.
 
 Requires the .NET 10 SDK (`dotnet` on `PATH`) and Google Chrome (`CHROME_BIN` or a standard install path). On macOS without Chrome, the helper falls back to Brave. It runs on Linux and macOS: it uses `setsid` when present and perl's `POSIX::setsid` otherwise, and resolves the repo by its physical path, because a Razor build through a symlinked checkout fails with `CS0234` on `VeeamVhcAws.Web.Components.Layout`. On a Cloud Agent checkout that has neither SDK nor packages, run `bash .cursor/install.sh` once.
 
@@ -65,11 +65,18 @@ The browser talks to the UI with role, accessible name, and the visible label te
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser fill --label Name --value lab-vbr
 ```
 
-`click` uses an exact accessible name. `wait-heading` waits for an exact heading. `wait-text` waits for a substring.
+`click` uses an exact accessible name. `wait-heading` waits for the first heading with that exact name, in page order. `wait-text` waits for a substring.
 
 Do not prove a save with `GET /api/config`. That route exists, and it is not the page the operator uses. There is no suppress API; suppress happens on the page.
 
-Buttons are inert until the Blazor circuit connects. `browser goto` waits for the page websocket and for the `Loading…` line to disappear before it returns.
+Buttons are inert until the Blazor circuit connects. On an interactive page, `browser goto` waits for the page websocket and for the `Loading…` line to disappear before it returns. Help is a static page with no circuit. `goto` returns `"interactive": false` for it and does not wait for a websocket.
+
+Alerts, Captures, and the Dashboard banner read the state file, which only a monitor run writes. This checkout has no Veeam server, so seed it with the helper instead of writing the file by hand. `seed-state findings` writes one warning finding (key `def`, resource `repo-disk`) and one captured error (key `abc`, resource `repo-cap`). `seed-state clear` writes a `last_run`, a `lastSuccess` for `lab-vbr`, and no findings. `seed-state <path.json>` writes your own file. Each seed is copied to `<evidence>/state/seed-<name>.json`. `assert-state --suppressed <key>` or `--not-suppressed <key>` reads the file the page wrote, checks both `suppressions` and the captured row's `suppressed` flag, and copies the file to `<evidence>/state/after-<key>.json`.
+
+```bash
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify seed-state findings
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify assert-state --suppressed abc
+```
 
 ## Evidence
 
@@ -133,8 +140,14 @@ Invoke the helper by path. `chmod +x` is already set in git.
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser screenshot --path /tmp/vhc-verify/evidence/<run-id>/servers/page.png
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser snapshot --path /tmp/vhc-verify/evidence/<run-id>/servers/page.aria.txt
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify assert-server --name lab-vbr --url https://lab-vbr.example:9419 --username backupadmin --password-absent verify-secret --verify-ssl true
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify seed-state findings
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify seed-state clear
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify assert-state --suppressed def
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify assert-state --not-suppressed abc
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify cleanup
 ```
+
+The fixtures live in `scripts/fixtures/`. Add one there when a feature needs a different state.
 
 `browser` starts `scripts/browser-daemon.mjs` on first use. The daemon uses `playwright-core` and the system Chrome. The first browser command runs `npm install --omit=dev` in `scripts/` if `node_modules` is missing. Cleanup stops the daemon.
 

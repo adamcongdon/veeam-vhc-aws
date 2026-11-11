@@ -1,0 +1,23 @@
+{
+  "findings": {
+    "def": {
+      "severity": "warning",
+      "server": "lab-vbr",
+      "monitor": "repo_health",
+      "resource": "repo-disk",
+      "message": "free space low"
+    }
+  },
+  "captured_errors": {
+    "abc": {
+      "severity": "error",
+      "server": "lab-vbr",
+      "monitor": "repo_health",
+      "resource": "repo-cap",
+      "text": "disk full",
+      "count": 2,
+      "suppressed": false
+    }
+  },
+  "suppressions": {}
+}

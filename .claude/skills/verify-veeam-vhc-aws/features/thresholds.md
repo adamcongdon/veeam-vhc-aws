@@ -32,7 +32,7 @@ Preconditions:
 - Repo Health and Retention are both tab buttons and headings. Worker Health is a tab button. Its heading is `Worker Health (VBAWS)`. `wait-heading` uses the heading text. `click --role button` uses the tab text. **Save Repo Health** is a different button from the tab.
 - Only the active tab's fields are in the page. Switch tabs before filling a retention or worker field.
 - Number boxes use `for` and `id`. `fill --label` still uses the label text in that `form-row`. A short prefix is enough when it is unique. `Free space warning threshold` does not match the critical field.
-- Saving one tab reloads the merged config, so default sections may appear in the yaml. The other tab's fields stay at the values already on the page.
+- A save reads the existing yaml merged with the loader defaults and writes the whole result back. Once a config file exists, every save also writes `global`, the other two monitor sections, and `output` (a default `json_stdout` if there was none). With no file, the first save writes only its own section. The other tabs' fields are not reloaded and stay at the values already on the page.
 - Defaults appear even when the yaml has no section yet. They are the in-page defaults (`15` warning, `5` critical on repo) until a save writes them.
 - The muted line under the heading says changes apply on the next scheduled run. Saving here does not contact Veeam.
 - Enabled checkboxes use a wrapping label (`Enabled`, `Include external repositories`, and the others). Click them with `click --role checkbox` and the label's accessible name.

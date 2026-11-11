@@ -14,7 +14,8 @@ This directory is the maintained source for verifying the web admin UI. Read thi
 - Start from the empty UI unless the feature file names a precondition.
 - Use the exact `vhc-verify browser` commands in the feature file.
 - Prefer headings, button names, link names, and label text. Do not click by coordinates.
-- After a mutation, reload the page and read the config file the UI wrote.
+- After a mutation, reload the page and read the config or state file the UI wrote (`assert-server`, `assert-state`).
+- Seed state with `vhc-verify seed-state`, never by hand-editing through an API.
 - Leave proof files in the evidence directory. Cleanup does not delete them.
 
 ## Proof and skip reporting
@@ -28,9 +29,9 @@ This directory is the maintained source for verifying the web admin UI. Read thi
 
 - [Servers](./servers.md) adds, edits, and deletes a VBR or VBAWS server. This is the path that creates a config file from an empty directory.
 - [Dashboard](./dashboard.md) shows the getting-started checklist, the status banner, finding counts, and the server list.
-- [Alerts](./alerts.md) filters findings and suppresses one. An empty install has no rows.
+- [Alerts](./alerts.md) filters findings and suppresses one. An empty install has no rows; `vhc-verify seed-state findings` adds one.
 - [Outputs](./outputs.md) adds, edits, and deletes a notification handler.
 - [Thresholds](./thresholds.md) edits repo, retention, and worker thresholds.
 - [Settings](./settings.md) edits logging, HTTP tuning, and the daily summary toggle.
-- [Captures](./captures.md) lists captured errors and suppresses one. An empty install has no rows.
-- [Help](./help.md) renders the embedded user guide and its anchor links.
+- [Captures](./captures.md) lists captured errors and suppresses one. An empty install has no rows; `vhc-verify seed-state findings` adds one.
+- [Help](./help.md) renders the embedded user guide, its **On this page** list, and its anchor links.

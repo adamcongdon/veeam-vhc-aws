@@ -6,7 +6,7 @@ Settings edits the `global` and `daily_summary` sections. The page also shows th
 
 - `settings-labels` gives every field an accessible name, including the number boxes.
 - `settings-save` writes the log level and log file, then shows them again after a reload.
-- `settings-daily` toggles the daily summary checkbox and writes `daily_summary.enabled`. On Windows, saving also registers or removes the scheduled task `Veeam VHC AWS Daily Summary`. On any other OS the save only writes the flag. The time of day stays on the task.
+- `settings-daily` toggles the daily summary checkbox and writes `daily_summary.enabled`. On Windows, saving also registers or removes the scheduled task `Veeam VHC AWS Daily Summary`. On any other OS the save only writes the flag. An existing task keeps its time of day; a new registration uses 08:00.
 
 ## How to get to it (user POV)
 
@@ -27,7 +27,7 @@ Preconditions:
 
 ## Gotchas
 
-- The Files table is read-only. The state path is where Alerts and Captures read `veeam-vhc-aws-state.json` unless `global.state_file` says otherwise. Under this helper that path is the data directory next to the config file. A relative state file is resolved from the config directory.
+- The Files table is read-only. The state path is where Alerts and Captures read `veeam-vhc-aws-state.json` unless `global.state_file` says otherwise. A relative state file is resolved from the config file's directory, so under this helper it sits in the data directory beside the yaml.
 - Number boxes use `for` and `id`. `fill --label` uses the label text.
-- Saving writes the logging map and the HTTP keys together. A field you did not edit is still written at the value shown on the page. The monitor reads `logging.level`. A save does not also write `global.log_level`.
-- The daily summary line says the time is controlled by the scheduled task. A save on Linux or macOS still writes `enabled: true` or `enabled: false`. The flash stays `Settings saved` because this machine has no Task Scheduler. On Windows the flash adds `Daily summary task registered.` or `Daily summary task removed.`
+- Saving writes the logging map, the HTTP keys, and `daily_summary.enabled` together. Because a save goes through the defaults merge, even a first save with no config file ends up writing every default section (`repo_health`, `retention`, `worker_health`, and `output` with `json_stdout`). A field you did not edit is still written at the value shown on the page. The monitor reads `logging.level`. A save does not also write `global.log_level`.
+- The daily summary line says the time is controlled by the scheduled task. A save on Linux or macOS still writes `enabled: true` or `enabled: false`. The flash stays `Settings saved` because this machine has no Task Scheduler. On Windows the flash is `Settings saved. Daily summary task registered.` or `Settings saved. Daily summary task removed.`, plain `Settings saved` when the task already matches, and `Settings saved. Daily summary task was not updated: <message>` when the task update fails.

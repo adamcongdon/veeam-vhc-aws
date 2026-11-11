@@ -73,20 +73,34 @@ async function gotoPath(path) {
   const socket = page
     .waitForEvent("websocket", { timeout: 20000 })
     .catch(() => null);
-  await page.goto(target, { waitUntil: "domcontentloaded", timeout: 20000 });
-  await socket;
+  const response = await page.goto(target, {
+    waitUntil: "domcontentloaded",
+    timeout: 20000,
+  });
+  // Interactive Server pages prerender a <!--Blazor:{..."type":"server"...}-->
+  // marker and open a circuit websocket. Static pages such as /help never
+  // open one, so waiting there would only stall for the full timeout. Read the
+  // served HTML: the live DOM no longer showed the markers on interactive
+  // pages (blazor.web.js consumes them), so page.content() is not reliable.
+  const html = response ? await response.text() : "";
+  const interactive = /<!--Blazor:\{[^>]*"type":"server"/.test(html);
+  if (interactive) {
+    await socket;
+  }
   await page.getByRole("heading", { level: 1 }).first().waitFor({ timeout: 20000 });
   const loading = page.getByText("Loading…", { exact: true });
   if ((await loading.count()) > 0) {
     await loading.first().waitFor({ state: "hidden", timeout: 20000 });
   }
+  return interactive;
 }
 
 async function run(command) {
   switch (command.op) {
-    case "goto":
-      await gotoPath(command.path);
-      return { url: page.url() };
+    case "goto": {
+      const interactive = await gotoPath(command.path);
+      return { url: page.url(), interactive };
+    }
     case "click": {
       const root = command.withinHeading
         ? page.locator(".modal").filter({
@@ -117,8 +131,11 @@ async function run(command) {
       });
       return { found: true };
     case "wait-heading":
+      // First match in document order: the page h1 comes before any
+      // same-named heading further down (the guide on /help has "### Help").
       await page
         .getByRole("heading", { name: command.name, exact: true })
+        .first()
         .waitFor({ timeout: command.timeout ?? 15000 });
       return { found: true };
     case "wait-hidden":
