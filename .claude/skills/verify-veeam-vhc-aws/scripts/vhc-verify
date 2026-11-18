@@ -395,8 +395,10 @@ cmd_browser() {
       browser_command "$(python3 -c 'import json,sys; print(json.dumps({"op":"wait-text","text":sys.argv[1]}))' "$1")"
       ;;
     wait-heading)
-      [ $# -eq 1 ] || die "usage: vhc-verify browser wait-heading 'Add Server'"
-      browser_command "$(python3 -c 'import json,sys; print(json.dumps({"op":"wait-heading","name":sys.argv[1]}))' "$1")"
+      local level=""
+      if [ "${1:-}" = "--level" ]; then level=$2; shift 2; fi
+      [ $# -eq 1 ] || die "usage: vhc-verify browser wait-heading [--level 1] 'Add Server'"
+      browser_command "$(python3 -c 'import json,sys; print(json.dumps({"op":"wait-heading","name":sys.argv[1],"level":int(sys.argv[2]) if sys.argv[2] else None}))' "$1" "$level")"
       ;;
     wait-hidden)
       [ $# -eq 1 ] || die "usage: vhc-verify browser wait-hidden 'No servers configured yet.'"
@@ -488,6 +490,70 @@ print(path)
 PY
 }
 
+cmd_seed_state() {
+  load_meta
+  local preset="" json=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --preset) preset=$2; shift 2 ;;
+      --json) json=$2; shift 2 ;;
+      *) die "unknown seed-state arg $1" ;;
+    esac
+  done
+  [ -n "$preset" ] || [ -n "$json" ] || \
+    die "usage: vhc-verify seed-state --preset findings|clear|empty  (or --json '{...}')"
+  local state=${STATE_PATH:-$DATA_DIR/veeam-vhc-aws-state.json}
+  python3 - "$state" "$preset" "$json" <<'PY'
+import json, os, sys
+path, preset, raw = sys.argv[1:4]
+presets = {
+    "empty": {"findings": {}, "captured_errors": {}, "suppressions": {}},
+    "clear": {"last_run": "2026-10-13T12:00:00Z", "findings": {},
+              "captured_errors": {}, "suppressions": {}},
+    "findings": {
+        "findings": {
+            "def": {"severity": "warning", "server": "lab-vbr",
+                    "monitor": "repo_health", "resource": "repo-disk",
+                    "message": "repo low"}},
+        "captured_errors": {
+            "abc": {"severity": "error", "server": "lab-vbr",
+                    "monitor": "repo_health", "resource": "repo-cap",
+                    "text": "disk full", "count": 2, "suppressed": False}},
+        "suppressions": {}},
+}
+if raw:
+    data = json.loads(raw)
+elif preset in presets:
+    data = presets[preset]
+else:
+    sys.exit(f"unknown preset {preset}; use one of {', '.join(presets)}")
+tmp = path + ".tmp"
+with open(tmp, "w", encoding="utf-8") as fh:
+    json.dump(data, fh, indent=2)
+os.replace(tmp, path)
+print(f"state written {path}")
+PY
+}
+
+cmd_show() {
+  load_meta
+  local which=${1:-} path
+  case "$which" in
+    config) path=$CONFIG ;;
+    state) path=${STATE_PATH:-$DATA_DIR/veeam-vhc-aws-state.json} ;;
+    *) die "usage: vhc-verify show config|state [--copy <evidence-subpath>]" ;;
+  esac
+  shift
+  [ -f "$path" ] || die "$which file does not exist at $path"
+  if [ "${1:-}" = "--copy" ]; then
+    [ -n "${2:-}" ] || die "usage: vhc-verify show $which --copy outputs/config.yaml"
+    mkdir -p "$(dirname "$EVIDENCE_DIR/$2")"
+    cp "$path" "$EVIDENCE_DIR/$2"
+    echo "copied to $EVIDENCE_DIR/$2" >&2
+  fi
+  cat "$path"
+}
+
 cmd_evidence_dir() {
   load_meta
   printf '%s\n' "$EVIDENCE_DIR"
@@ -517,7 +583,7 @@ cmd_cleanup() {
 
 usage() {
   cat <<EOF
-Usage: vhc-verify launch|doctor|browser|assert-server|evidence-dir|cleanup
+Usage: vhc-verify launch|doctor|browser|assert-server|seed-state|show|evidence-dir|cleanup
 EOF
   exit 1
 }
@@ -530,6 +596,8 @@ main() {
     doctor) cmd_doctor "$@" ;;
     browser) cmd_browser "$@" ;;
     assert-server) cmd_assert_server "$@" ;;
+    seed-state) cmd_seed_state "$@" ;;
+    show) cmd_show "$@" ;;
     evidence-dir) cmd_evidence_dir "$@" ;;
     cleanup) cmd_cleanup "$@" ;;
     *) usage ;;

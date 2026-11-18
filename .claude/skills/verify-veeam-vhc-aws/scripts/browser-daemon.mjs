@@ -118,7 +118,11 @@ async function run(command) {
       return { found: true };
     case "wait-heading":
       await page
-        .getByRole("heading", { name: command.name, exact: true })
+        .getByRole("heading", {
+          name: command.name,
+          exact: true,
+          ...(command.level ? { level: command.level } : {}),
+        })
         .waitFor({ timeout: command.timeout ?? 15000 });
       return { found: true };
     case "wait-hidden":

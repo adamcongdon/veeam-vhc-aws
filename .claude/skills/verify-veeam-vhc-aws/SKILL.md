@@ -39,7 +39,7 @@ dotnet run --project <repo>/src/VeeamVhcAws/VeeamVhcAws.csproj -- ui \
 
 Loopback has no auth token. Do not pass `--bind 0.0.0.0`. A non-loopback bind reads or creates `~/.vhc/ui-token.txt`, which is shared by every UI on the machine.
 
-The state file defaults to `./veeam-vhc-aws-state.json`. That relative path is resolved beside the config file, not from the process working directory. Under this helper the config lives in the data directory, so the state file is `<data>/veeam-vhc-aws-state.json`. Launch prints it as `state`. The Settings page shows the same path. Pages read the file on each load, so you can write it after launch and reload. It is gitignored. Two UIs can run together only when each launch has its own `VHC_VERIFY_RUN_ID`, its own data directory, and its own port. Leave the variable unset for a single run. The helper records that run in `/tmp/vhc-verify/latest`.
+The state file defaults to `./veeam-vhc-aws-state.json`. That relative path is resolved beside the config file, not from the process working directory. Under this helper the config lives in the data directory, so the state file is `<data>/veeam-vhc-aws-state.json`. Launch prints it as `state`. The Settings page shows the same path. Pages read the file on each load, so seed it after launch with `vhc-verify seed-state` and reload. It is gitignored. Two UIs can run together only when each launch has its own `VHC_VERIFY_RUN_ID`, its own data directory, and its own port. Leave the variable unset for a single run. The helper records that run in `/tmp/vhc-verify/latest`.
 
 Requires the .NET 10 SDK (`dotnet` on `PATH`) and Google Chrome (`CHROME_BIN` or a standard install path). On macOS without Chrome, the helper falls back to Brave. It runs on Linux and macOS: it uses `setsid` when present and perl's `POSIX::setsid` otherwise, and resolves the repo by its physical path, because a Razor build through a symlinked checkout fails with `CS0234` on `VeeamVhcAws.Web.Components.Layout`. On a Cloud Agent checkout that has neither SDK nor packages, run `bash .cursor/install.sh` once.
 
@@ -65,9 +65,14 @@ The browser talks to the UI with role, accessible name, and the visible label te
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser fill --label Name --value lab-vbr
 ```
 
-`click` uses an exact accessible name. `wait-heading` waits for an exact heading. `wait-text` waits for a substring.
+`click` uses an exact accessible name. `wait-heading` waits for an exact heading, and it fails when two headings share that name. Add `--level 1` to pick the page heading, for example `wait-heading --level 1 Help`, because the rendered guide also has a `### Help`. `wait-text` waits for a substring.
 
-Do not prove a save with `GET /api/config`. That route exists, and it is not the page the operator uses. There is no suppress API; suppress happens on the page.
+Do not prove a save with `GET /api/config`. That route exists, and it is not the page the operator uses. There is no suppress HTTP API; suppress happens on the page (or through the `captures suppress` CLI).
+
+Read the files the UI wrote, and seed the state file, through the helper:
+
+- `vhc-verify show config` or `vhc-verify show state` prints the file. Add `--copy <subpath>` to also copy it under the evidence directory, for example `show config --copy outputs/config.yaml`.
+- `vhc-verify seed-state --preset findings|clear|empty` atomically writes a known state. `findings` holds a warning finding `def` (`repo-disk`) and a captured error `abc` (`repo-cap`) on `lab-vbr`. `clear` sets `last_run` with no findings. `empty` has no rows. `seed-state --json '<object>'` writes any other state.
 
 Buttons are inert until the Blazor circuit connects. `browser goto` waits for the page websocket and for the `Loading…` line to disappear before it returns.
 
@@ -125,6 +130,7 @@ Invoke the helper by path. `chmod +x` is already set in git.
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser fill --label Name --value lab-vbr
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser select --label Type --value json_file
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-heading "Add Server"
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-heading --level 1 Help
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-text "Server 'lab-vbr' added"
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-value --label URL --value https://lab-vbr:9419
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser wait-hidden "No servers configured yet."
@@ -133,6 +139,10 @@ Invoke the helper by path. `chmod +x` is already set in git.
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser screenshot --path /tmp/vhc-verify/evidence/<run-id>/servers/page.png
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify browser snapshot --path /tmp/vhc-verify/evidence/<run-id>/servers/page.aria.txt
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify assert-server --name lab-vbr --url https://lab-vbr.example:9419 --username backupadmin --password-absent verify-secret --verify-ssl true
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify seed-state --preset findings
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify seed-state --json '{"last_run":"2026-10-13T12:00:00Z","findings":{},"captured_errors":{},"suppressions":{}}'
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify show config --copy outputs/config.yaml
+.claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify show state
 .claude/skills/verify-veeam-vhc-aws/scripts/vhc-verify cleanup
 ```
 
